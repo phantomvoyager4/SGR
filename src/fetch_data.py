@@ -64,8 +64,8 @@ def get_games_data(app_id):
     if response.status_code == 200:
         data = response.json()
         output_path = f"data/{app_id}.json"
-        with open(output_path, "w") as f:
-            json.dump(data, f)
+        # with open(output_path, "w") as f:
+        #     json.dump(data, f)
         str_app_id = str(app_id)
         
         if data and data.get(str_app_id) and data[str_app_id].get('success'):
@@ -78,7 +78,11 @@ def get_games_data(app_id):
         
     return None
 
-
-cs2id = games_raw["response"]['apps'][0]["appid"]
-
-get_games_data(cs2id)
+for n in range(2):
+    with open('data/games_info.json', 'r') as f:
+        games_data = json.load(f)
+    id = 1631270
+    game_data = {}
+    game_data[id] = get_games_data(id)
+    with open(f'data/gamedata{id}.json', 'w') as f:
+        json.dump(game_data, f)
