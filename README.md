@@ -1,0 +1,1 @@
+link do prototypu strony w figmie: https://www.figma.com/design/X0vyohfhJrMyU7qfeGo6Ll/Untitled?node-id=0-1&p=f&t=1YmrUn7rBX9DdiE7-0
