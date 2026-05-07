@@ -18,21 +18,40 @@ def load_api_key():
 
 api_key = load_api_key()
 
-game_id = 4000
+URL = 'https://api.isthereanydeal.com/games/search/v1'
 
-URL = 'https://api.isthereanydeal.com/games/history/v2'
+test_title = 'garrys-mod'
 
 params = {
     'key': api_key,
-    'id': game_id,
-    'shops': 61,
-    'country': 'PL'
+    'title': test_title         #fetching game name to get uuid
 }
 
 response = requests.get(URL, params=params)
 
 if response.status_code == 200:
     data = response.json()
-    print(data)
+
+    game_id = data[0]["id"]
+
+    URL_price = 'https://api.isthereanydeal.com/games/history/v2'       #fetching  price data
+
+    params = {
+        'key': api_key,
+        'id': game_id,
+        'shops': 61,
+        'country': 'PL'
+        }
+
+    response = requests.get(URL_price, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        print(data)
+    else:
+        print(f"Error price: {response.status_code}")
 else:
-    print(f"Error: {response.status_code}")
+    print(f"Error id: {response.status_code}")
+
+
+
