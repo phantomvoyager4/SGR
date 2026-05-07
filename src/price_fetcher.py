@@ -1,32 +1,38 @@
-import time
-from seleniumbase import Driver
-import pyautogui
+import os
+from dotenv import load_dotenv
+import requests
 
-def get_prices(id):
-    url = f"https://steamdb.info/app/{id}/"
+def load_api_key():
+    """
+    Load Steam API keys from the .env file located in the .venv folder.
+    
+    Returns:
+        tuple: A tuple containing (api_key).
+    """
+    # Notebook is in the 'src/' folder, so go up one level to reach '.venv/.env'
+    env_path = 'SGR\src\config.env'
+    
+    load_dotenv(dotenv_path=env_path)
+    api_key = os.getenv('itd_api_key')
+    return api_key
 
-    driver = Driver(uc_cdp=True, incognito=True)
+api_key = load_api_key()
 
-    try:
-        driver.get(url)
+game_id = 4000
 
-        driver.wait_for_element_present("div.highcharts-container", timeout=15)
+URL = 'https://api.isthereanydeal.com/games/history/v2'
 
-        driver.execute_script("Highcharts.charts[0].downloadCSV();")
+params = {
+    'key': api_key,
+    'id': game_id,
+    'shops': 61,
+    'country': 'PL'
+}
 
-        time.sleep(2)
+response = requests.get(URL, params=params)
 
-        pyautogui.press('Enter')
-        time.sleep(1)
-
-        print('Downloaded successfully')
-
-    except:
-        print('Request error')
-    finally:    
-        driver.quit()
-        
-
-test_id = 4000
-
-get_prices(test_id)
+if response.status_code == 200:
+    data = response.json()
+    print(data)
+else:
+    print(f"Error: {response.status_code}")
