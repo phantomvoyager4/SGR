@@ -1,11 +1,17 @@
 import json
 import re
 import pandas as pd
+import os
 
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MinMaxScaler
 from nltk.stem import WordNetLemmatizer
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+settings_path = os.path.join(current_dir, "settings.json")
+
+settings = pd.read_json(settings_path, typ="series")
 
 
 def data_load(file_path):
@@ -72,6 +78,25 @@ def df_cleansing(data_to_df):
     
     df = df.drop(columns=['Free To Play'], errors='ignore')
 
+    def delete_irrelevant_column(columnname, df, count):
+        prefix = f"{columnname}_"
+        target_cols = df.filter(like=prefix).columns
+        
+        if len(target_cols) > count:
+            # Vectorized sum for all target columns at once
+            col_sums = df[target_cols].sum()
+            
+            # Identify the top 'count' columns with the highest sums
+            cols_to_keep = col_sums.nlargest(count).index
+            cols_to_drop = set(target_cols) - set(cols_to_keep)
+            
+            # Drop the irrelevant columns in one fast operation
+            df.drop(columns=list(cols_to_drop), inplace=True)
+
+    delete_irrelevant_column('developers', df, settings['max_developers'])
+    delete_irrelevant_column('publishers', df, settings['max_publishers'])
+
+
     df['dlc_count'] = df['dlc'].apply(lambda x: len(x) if isinstance(x, list) else 0)
     df['achievements_count'] = df['achievements'].apply(lambda x: x.get('total', 0) if isinstance(x, dict) else 0)
     df = df.drop(columns=['dlc', 'achievements'], errors='ignore')
@@ -103,7 +128,7 @@ def nlp_part(dataframe):
         cell_clean = ' '.join(lemmatizer.lemmatize(word) for word in tokens)
         data_clean.append(cell_clean)
 
-    tfidf = TfidfVectorizer(stop_words='english', max_features=1000, min_df=10, max_df=0.85)
+    tfidf = TfidfVectorizer(stop_words='english', max_features=settings['max_features'], min_df=10, max_df=0.85)
     data_tfidf = tfidf.fit_transform(data_clean)
 
     df_tfidf = pd.DataFrame(
