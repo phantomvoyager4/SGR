@@ -58,43 +58,34 @@ def df_cleansing(data_to_df):
     df['is_free'] = (df['is_free'] == True).astype(int)
 
     # 5. Extract MultiLabelBinarizer results in memory and concat once
-    def get_mlb_df(column_name):
+    def get_mlb_df(column_name, max_classes=None):
+        if max_classes is not None:
+            # Find the top most frequent classes to prevent memory issues
+            top_items = set(df[column_name].explode().value_counts().nlargest(max_classes).index)
+            # Retain only those items in each list
+            filtered_series = df[column_name].apply(lambda x: [i for i in x if i in top_items])
+        else:
+            filtered_series = df[column_name]
+            
         mlb = MultiLabelBinarizer()
-        encoded_matrix = mlb.fit_transform(df[column_name])
+        encoded_matrix = mlb.fit_transform(filtered_series)
         # Add column prefix to prevent duplicate names like 'EckGames' appearing in both developer and publisher
         return pd.DataFrame(encoded_matrix, columns=[f"{column_name}_{str(c)}" for c in mlb.classes_], index=df.index)
 
     mlb_dfs = [
         get_mlb_df('genres'),
         get_mlb_df('categories'),
-        get_mlb_df('developers'),
-        get_mlb_df('publishers')
+        get_mlb_df('developers', settings['max_developers']),
+        get_mlb_df('publishers', settings['max_publishers'])
     ]
     
     # Drop original categorical columns
     df = df.drop(columns=['genres', 'categories', 'developers', 'publishers'])
     
+    # Use pandas native sparse/memory efficient concatenation
     df = pd.concat([df] + mlb_dfs, axis=1)
     
     df = df.drop(columns=['Free To Play'], errors='ignore')
-
-    def delete_irrelevant_column(columnname, df, count):
-        prefix = f"{columnname}_"
-        target_cols = df.filter(like=prefix).columns
-        
-        if len(target_cols) > count:
-            # Vectorized sum for all target columns at once
-            col_sums = df[target_cols].sum()
-            
-            # Identify the top 'count' columns with the highest sums
-            cols_to_keep = col_sums.nlargest(count).index
-            cols_to_drop = set(target_cols) - set(cols_to_keep)
-            
-            # Drop the irrelevant columns in one fast operation
-            df.drop(columns=list(cols_to_drop), inplace=True)
-
-    delete_irrelevant_column('developers', df, settings['max_developers'])
-    delete_irrelevant_column('publishers', df, settings['max_publishers'])
 
 
     df['dlc_count'] = df['dlc'].apply(lambda x: len(x) if isinstance(x, list) else 0)
@@ -143,7 +134,7 @@ def nlp_part(dataframe):
 
 
 def scaling(df):
-    cols_to_scale = ['price_overview', 'recommendations', 'dlc_count', 'achievements_count']
+    cols_to_scale = ['price_overview', 'recommendations', 'dlc_count', 'achievements_count', 'release_year']
 
     scaler = MinMaxScaler()
 
@@ -172,7 +163,6 @@ def process_pipeline(file_paths):
     print(f"Total games loaded: {len(all_data)}")
     print("Cleaning data and extracting categories...")
     df = df_cleansing(all_data)
-    df = df.set_index('name')
     
     print("Running NLP TF-IDF...")
     df_nlp = nlp_part(df)
