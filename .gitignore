@@ -1,7 +1,4 @@
 .venv
-<<<<<<< HEAD
 config.env
 .env
-=======
->>>>>>> d7a1ed42d2349b9b2fab114913fa88075e7169c5
 __pycache__
