@@ -30,8 +30,8 @@ export const PLATFORMS = [
 ];
 
 export const USER = {
-  username: "zosiaaa",
-  avatar: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=200&h=200&fit=crop",
+  username: "zzzosia",
+  avatar: "https://static.wikia.nocookie.net/clair-obscur/images/9/91/COE33_char_icon_Lune.png/revision/latest?cb=20250506001951",
   steamConnected: true,
   lastActive: "2 godziny temu",
   totalHours: 12420,
