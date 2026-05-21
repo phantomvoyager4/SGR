@@ -96,7 +96,7 @@ def main():
         for app in games_id["response"]["apps"]:
             all_ids.append(app["appid"])
 
-    print(f"Total IDs loaded: {len(all_ids)}")
+    print(f"Total IDs loaded: {len(all_ids)}") #162941
 
     # 1. Read existing attempted IDs (both successful and failed are stored here)
     attempted_file = os.path.join(output_dir, "attempted_ids.txt")
