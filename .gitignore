@@ -2,3 +2,10 @@
 config.env
 .env
 __pycache__
+
+node_modules
+dist
+dist-ssr
+*.local
+parquet
+*.parquet
