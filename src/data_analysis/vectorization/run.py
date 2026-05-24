@@ -26,7 +26,7 @@ try:
         print("[WARNING] Pipeline returned an empty DataFrame.")
     else:
         print(f"[INFO] Pipeline complete. Final dataset shape: {massive_df.shape}")
-        excel_path = os.path.join(base_dir, 'data', 'parquet_example', 'index_table.xlsx')
+        excel_path = os.path.join(base_dir, 'data', 'parquet', 'index_table.xlsx')
         os.makedirs(os.path.dirname(excel_path), exist_ok=True)
         index_df = massive_df['name']
         index_df['index'] = index_df.index
@@ -39,7 +39,7 @@ except Exception as e:
 # Phase 3: Data Export
 try:
     print("Saving to Parquet...")
-    output_path = os.path.join(base_dir, 'data', 'parquet_example', 'games_fully_vectorized.parquet')
+    output_path = os.path.join(base_dir, 'data', 'parquet', 'games_fully_vectorized.parquet')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     # Reset index so 'name' becomes a standard column before saving, maintaining it without relying on index logic
     massive_df.reset_index().to_parquet(output_path, engine='pyarrow', index=False)
