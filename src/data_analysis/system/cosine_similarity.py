@@ -2,12 +2,14 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
+def cs_recommender(movielist:list):
+    """
+    This function is a recommender, based on cosine similarity. As an input, it takes list of game names, 
+    which are then converted into vectors. After np.mean of this vectors, we find 10 games with most similar 
+    vectors and return them as list of dictionaries: "game name": "similarity"
+    """
 
-
-
-def cs_recommender(movielist:list):\
-
-    def load_data(path='data/parquet/games_fully_vectorized.parquet'):
+    def load_data(path='../../../data/parquet/games_fully_vectorized.parquet'):
         df = pd.read_parquet(path)
         return df
 
@@ -42,5 +44,5 @@ def cs_recommender(movielist:list):\
         server_return = [{row.name: round(row.similarity, 2)} for row in top_recommendations.itertuples(index=False)]
         return server_return
     
-lmao = cs_recommender(['Counter-Strike', 'Counter-Strike: Condition Zero', 'Half-Life', 'Half-Life: Blue Shift'])
-print(lmao)
+# lmao = cs_recommender(['Counter-Strike', 'Counter-Strike: Condition Zero', 'Half-Life', 'Half-Life: Blue Shift'])
+# print(lmao)
