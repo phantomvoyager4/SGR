@@ -11,3 +11,7 @@ def root():
 def recommend(movie_list: list = Query(...)):
     response = cs_recommender(movielist=movie_list)
     return response
+
+
+
+# kill -9 $(lsof -t -i:8000)
