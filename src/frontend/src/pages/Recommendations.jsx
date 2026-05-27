@@ -7,11 +7,78 @@ import { RecGameCard } from "../components/GameCard";
 export default function Recommendations() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const basedOn = params.get("based") || "Bloodborne, Elden Ring, Wiedźmin 3";
+  const basedOnStr = params.get("based") || "";
+  const basedTitles = basedOnStr.split("||").filter(Boolean);
+  const basedOn = basedTitles.join(", ") || "Wybierz gry, aby wygenerować rekomendacje";
 
   const [priceRange, setPriceRange] = useState(300);
   const [platforms, setPlatforms] = useState({ pc: true, ps5: false, xbox: false, steamdeck: false });
-  const [genres, setGenres] = useState({ RPG: true, FPS: false, Horror: false, Indie: false });
+  const [genres, setGenres] = useState({ RPG: false, FPS: false, Horror: false, Indie: false, Action: false });
+
+  const [recsData, setRecsData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (basedTitles.length === 0) return;
+    
+    const abortController = new AbortController();
+    const { signal } = abortController;
+    
+    setLoading(true);
+    
+    // Construct query parameters for FastAPI Query list
+    const queryParams = basedTitles.map(t => `movie_list=${encodeURIComponent(t)}`).join('&');
+    
+    fetch(`http://localhost:8000/recommender?${queryParams}`, { signal })
+      .then(res => res.json())
+      .then(data => {
+        // data is a list of dicts: [ {"Game A": 0.95}, {"Game B": 0.92} ]
+        const formatted = data.map(item => {
+          const gameName = Object.keys(item)[0];
+          const similarity = item[gameName];
+          return { name: gameName, match: Math.round(similarity * 100) };
+        });
+        
+        // Now fetch details for these games from backend
+        const namesQuery = formatted.map(g => g.name).join("||");
+        return fetch(`http://localhost:8000/games_by_name?names=${encodeURIComponent(namesQuery)}`, { signal })
+          .then(res => res.json())
+          .then(details => {
+             // Merge details with match score
+             const merged = formatted.map(rec => {
+               // find corresponding game detail
+               const detail = details.find(d => d.title === rec.name);
+               return {
+                  id: detail ? detail.id : rec.name,
+                  title: rec.name,
+                  match: rec.match,
+                  cover: detail ? detail.cover : "", // fallback cover handled in card
+                  tag: detail && detail.genre ? detail.genre[0] : "INNE",
+                  price: 0, // Placeholder
+                  discount: 0,
+                  rating: 8.5,
+                  platforms: ["pc"],
+                  genre: detail ? detail.genre : []
+               };
+             });
+             setRecsData(merged);
+             setLoading(false);
+          });
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') {
+          console.log('Request aborted');
+        } else {
+          console.error(err);
+          setLoading(false);
+        }
+      });
+      
+    // Cleanup function when the component unmounts or basedOnStr changes
+    return () => {
+      abortController.abort();
+    };
+  }, [basedOnStr]);
 
   const togglePlatform = (id) => setPlatforms((p) => ({ ...p, [id]: !p[id] }));
   const toggleGenre = (g) => setGenres((x) => ({ ...x, [g]: !x[g] }));
@@ -19,20 +86,19 @@ export default function Recommendations() {
   const reset = () => {
     setPriceRange(300);
     setPlatforms({ pc: true, ps5: false, xbox: false, steamdeck: false });
-    setGenres({ RPG: true, FPS: false, Horror: false, Indie: false });
+    setGenres({ RPG: false, FPS: false, Horror: false, Indie: false, Action: false });
   };
 
   const recs = useMemo(() => {
-    const basedTitles = basedOn.toLowerCase();
-    let list = GAMES.filter((g) => !basedTitles.includes(g.title.toLowerCase()));
+    let list = [...recsData];
 
-    // price filter
+    // price filter 
     list = list.filter((g) => {
       const final = g.price * (1 - g.discount / 100);
       return final <= priceRange;
     });
 
-    // platform filter
+    // platform filter 
     const activePlatforms = Object.keys(platforms).filter((k) => platforms[k]);
     if (activePlatforms.length > 0) {
       list = list.filter((g) => activePlatforms.some((p) => g.platforms.includes(p)));
@@ -43,13 +109,13 @@ export default function Recommendations() {
     if (activeGenres.length > 0) {
       list = list.filter((g) =>
         activeGenres.some((gg) =>
-          g.genre.some((gn) => gn.toLowerCase().includes(gg.toLowerCase())) || g.tag.toLowerCase() === gg.toLowerCase()
+          g.genre && g.genre.some((gn) => gn.toLowerCase().includes(gg.toLowerCase()))
         )
       );
     }
 
-    return list.slice(0, 6).map((g, i) => ({ ...g, match: 99 - i * 2 }));
-  }, [priceRange, platforms, genres, basedOn]);
+    return list;
+  }, [priceRange, platforms, genres, recsData]);
 
   return (
     <div className="max-w-[1400px] mx-auto fade-up">
@@ -145,7 +211,7 @@ export default function Recommendations() {
               Gatunki
             </div>
             <div className="flex flex-wrap gap-2">
-              {["RPG", "FPS", "Horror", "Indie"].map((g) => (
+              {["RPG", "FPS", "Horror", "Indie", "Action"].map((g) => (
                 <button
                   key={g}
                   data-testid={`genre-${g.toLowerCase()}`}
@@ -166,7 +232,13 @@ export default function Recommendations() {
 
         {/* Results */}
         <div>
-          {recs.length === 0 ? (
+          {loading ? (
+            <div className="rounded-2xl border p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+              <div className="w-10 h-10 border-4 border-t-[color:var(--teal)] rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--teal)" }}></div>
+              <div className="font-display font-bold text-[18px]">Generowanie rekomendacji...</div>
+              <p className="text-[14px] text-[color:var(--text-dim)]">Nasz model sztucznej inteligencji dopasowuje podobne pozycje do Twojej bazy...</p>
+            </div>
+          ) : recs.length === 0 ? (
             <div
               data-testid="empty-results"
               className="rounded-2xl border p-12 text-center"

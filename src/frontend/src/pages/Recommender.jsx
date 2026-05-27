@@ -6,35 +6,71 @@ import { SelectableLibraryCard } from "../components/GameCard";
 
 export default function Recommender() {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState(new Set(["bloodborne", "elden-ring", "witcher-3"]));
+  const [selected, setSelected] = useState(new Set()); 
   const [q, setQ] = useState("");
+  const [library, setLibrary] = useState([]);
+  const [selectedGames, setSelectedGames] = useState([]);
 
   const toggle = (id) => {
+    const strId = String(id);
     const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
+    next.has(strId) ? next.delete(strId) : next.add(strId);
     setSelected(next);
   };
 
-  const library = useMemo(
-    () => GAMES.filter((g) => g.title.toLowerCase().includes(q.toLowerCase())),
-    [q]
-  );
+  React.useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (q.trim()) {
+        fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}`)
+          .then(res => res.json())
+          .then(data => setLibrary(data))
+          .catch(err => console.error(err));
+      } else {
+        fetch(`http://localhost:8000/search?q=&limit=20`)
+          .then(res => res.json())
+          .then(data => setLibrary(data))
+          .catch(err => console.error(err));
+      }
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [q]);
 
-  const selectedGames = [...selected].map((id) => GAMES.find((g) => g.id === id)).filter(Boolean);
+  React.useEffect(() => {
+    const ids = Array.from(selected).join(",");
+    if (ids) {
+      fetch(`http://localhost:8000/games?ids=${ids}`)
+        .then(res => res.json())
+        .then(data => {
+          // Remove duplicates just in case
+          const unique = [];
+          const seen = new Set();
+          for (const g of data) {
+            if (!seen.has(String(g.id))) {
+              seen.add(String(g.id));
+              unique.push(g);
+            }
+          }
+          setSelectedGames(unique);
+        })
+        .catch(err => console.error(err));
+    } else {
+      setSelectedGames([]);
+    }
+  }, [selected]);
 
   const handleGenerate = () => {
-    if (selected.size < 3) return;
-    const titles = selectedGames.map((g) => g.title).join(",");
+    if (selected.size < 2) return;
+    const titles = selectedGames.map((g) => g.title).join("||");
     navigate(`/recommendations?based=${encodeURIComponent(titles)}`);
   };
 
-  const canGenerate = selected.size >= 3;
+  const canGenerate = selected.size >= 2;
 
   return (
     <div className="max-w-[1400px] mx-auto fade-up">
       <h1 className="font-display font-black text-[44px] leading-[1.05] mb-3">Wybierz swoje ulubione</h1>
       <p className="text-[15px] mb-8 max-w-[620px]" style={{ color: "var(--text-dim)" }}>
-        Zaznacz co najmniej 3 gry ze swojej biblioteki Steam, abyśmy mogli wygenerować dla Ciebie idealne rekomendacje.
+        Zaznacz co najmniej 2 gry ze swojej biblioteki Steam, abyśmy mogli wygenerować dla Ciebie idealne rekomendacje.
       </p>
 
       {/* Stats banner */}
@@ -92,19 +128,19 @@ export default function Recommender() {
             Wybrane tytuły
           </div>
           <div className="flex gap-4 flex-wrap">
-            {selectedGames.map((g) => (
+            {selectedGames.filter(g => selected.has(String(g.id))).map((g) => (
               <div
                 key={g.id}
                 data-testid={`selected-${g.id}`}
                 onClick={() => toggle(g.id)}
-                className="w-[120px] aspect-[2/3] rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1"
+                className="w-[180px] aspect-[460/215] rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 bg-[#0A1018]"
                 style={{ borderColor: "var(--teal)", boxShadow: "0 0 20px -4px rgba(94, 234, 212, 0.5)" }}
               >
                 <img
                   src={g.cover}
                   alt={g.title}
                   className="w-full h-full object-cover"
-                  onError={(e) => { e.target.src = `https://placehold.co/240x360/0F1624/5EEAD4?text=${encodeURIComponent(g.title)}`; }}
+                  onError={(e) => { e.target.src = `https://placehold.co/460x215/0F1624/5EEAD4?text=${encodeURIComponent(g.title)}`; }}
                 />
               </div>
             ))}
@@ -133,13 +169,13 @@ export default function Recommender() {
       <div data-testid="library-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
         {library.map((g, i) => (
           <div key={g.id} className="fade-up" style={{ animationDelay: `${i * 40}ms` }}>
-            <SelectableLibraryCard game={g} selected={selected.has(g.id)} onToggle={toggle} />
+            <SelectableLibraryCard game={g} selected={selected.has(String(g.id))} onToggle={toggle} />
           </div>
         ))}
         <button
           data-testid="load-more-btn"
-          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 aspect-[2/3] transition-all hover:border-[color:var(--teal-dim)]"
-          style={{ borderColor: "var(--border-hover)", background: "transparent", color: "var(--text-dim)" }}
+          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:border-[color:var(--teal-dim)] w-full"
+          style={{ borderColor: "var(--border-hover)", background: "transparent", color: "var(--text-dim)", minHeight: "180px" }}
         >
           <Plus size={28} />
           <span className="font-mono text-[10px] uppercase tracking-wider">Wczytaj więcej</span>

@@ -105,21 +105,21 @@ export function RecGameCard({ game, match = 95, onMore }) {
   return (
     <div
       data-testid={`rec-game-${game.id}`}
-      className="rounded-xl overflow-hidden border transition-all duration-300 hover:-translate-y-1"
+      className="rounded-xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 w-full"
       style={{ background: "var(--panel)", borderColor: "var(--border)" }}
     >
-      <div className="relative aspect-[3/4] overflow-hidden">
+      <div className="relative overflow-hidden w-full" style={{ aspectRatio: "460/215" }}>
         <img
           src={game.cover}
           alt={game.title}
           className="w-full h-full object-cover"
-          onError={(e) => { e.target.src = `https://placehold.co/600x800/0F1624/5EEAD4?text=${encodeURIComponent(game.title)}`; }}
+          onError={(e) => { e.target.src = `https://placehold.co/460x215/0F1624/5EEAD4?text=${encodeURIComponent(game.title)}`; }}
         />
         <div className="absolute top-3 right-3 px-3 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider"
              style={{ background: "rgba(5, 8, 15, 0.85)", border: "1px solid var(--teal)", color: "var(--teal)" }}>
           {match}% Match
         </div>
-        <div className="absolute bottom-3 left-3 font-display font-black text-[20px] drop-shadow-lg">
+        <div className="absolute bottom-3 left-3 font-display font-black text-[20px] drop-shadow-lg" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
           {game.title}
         </div>
       </div>
@@ -163,19 +163,19 @@ export function SelectableLibraryCard({ game, selected, onToggle }) {
     <button
       data-testid={`lib-select-${game.id}`}
       onClick={() => onToggle(game.id)}
-      className="text-left rounded-xl overflow-hidden border-2 transition-all duration-300"
+      className="text-left w-full rounded-xl overflow-hidden border-2 transition-all duration-300"
       style={{
         background: "var(--panel)",
         borderColor: selected ? "var(--teal)" : "var(--border)",
         boxShadow: selected ? "0 0 24px -4px rgba(94, 234, 212, 0.4)" : "none",
       }}
     >
-      <div className="relative aspect-[2/3] overflow-hidden">
+      <div className="relative overflow-hidden w-full" style={{ aspectRatio: "460/215" }}>
         <img
           src={game.cover}
           alt={game.title}
           className="w-full h-full object-cover"
-          onError={(e) => { e.target.src = `https://placehold.co/600x900/0F1624/5EEAD4?text=${encodeURIComponent(game.title)}`; }}
+          onError={(e) => { e.target.src = `https://placehold.co/460x215/0F1624/5EEAD4?text=${encodeURIComponent(game.title)}`; }}
         />
         {selected && (
           <div className="absolute inset-0" style={{ background: "rgba(94, 234, 212, 0.1)" }} />
