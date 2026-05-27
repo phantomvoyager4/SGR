@@ -24,8 +24,8 @@ def search(q: str = "", limit: int = 50):
 @app.get('/games')
 def get_games(ids: str):
     load_data()
-    id_list = ids.split(',')
-    results = [g for g in game_index if str(g["id"]) in id_list]
+    id_set = set(ids.split(','))
+    results = [g for g in game_index if str(g["id"]) in id_set]
     return results
 
 @app.get('/games_by_name')
