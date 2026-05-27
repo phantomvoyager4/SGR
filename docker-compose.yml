@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./src/backend/Dockerfile
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./src/frontend
+    ports:
+    - "3000:3000"
+    stdin_open: true  
+    tty: true
+    depends_on:
+      - backend
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
