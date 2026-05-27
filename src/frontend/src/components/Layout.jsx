@@ -39,10 +39,10 @@ export default function Layout({ children }) {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-md grid place-items-center font-display font-black text-[14px]"
                    style={{ background: "var(--teal)", color: "#04111A" }}>
-                ED
+                SGR
               </div>
               <div>
-                <div className="font-display font-bold text-[17px] leading-none">ED Project</div>
+                <div className="font-display font-bold text-[17px] leading-none">Steam Game Recommender</div>
               </div>
             </div>
             <div className="mt-2 font-mono text-[9px] tracking-[0.2em] uppercase"

@@ -9,7 +9,7 @@ def cs_recommender(movielist:list):
     vectors and return them as list of dictionaries: "game name": "similarity"
     """
 
-    def load_data(path='../../../data/parquet/games_fully_vectorized.parquet'):
+    def load_data(path='../../data/parquet/games_fully_vectorized.parquet'):
         df = pd.read_parquet(path)
         return df
 
