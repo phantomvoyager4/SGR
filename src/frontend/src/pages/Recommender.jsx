@@ -68,7 +68,7 @@ export default function Recommender() {
 
   return (
     <div className="max-w-[1400px] mx-auto fade-up">
-      <h1 className="font-display font-black text-[44px] leading-[1.05] mb-3">Wybierz swoje ulubione</h1>
+      <h1 className="font-display font-black text-[44px] leading-[1.05] mb-3">Wybierz swoje ulubione gry</h1>
       <p className="text-[15px] mb-8 max-w-[620px]" style={{ color: "var(--text-dim)" }}>
         Zaznacz co najmniej 2 gry ze swojej biblioteki Steam, abyśmy mogli wygenerować dla Ciebie idealne rekomendacje.
       </p>

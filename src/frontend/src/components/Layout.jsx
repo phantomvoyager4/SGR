@@ -35,19 +35,15 @@ export default function Layout({ children }) {
       >
         <div>
           {/* Logo */}
-          <div className="mb-10 px-1" data-testid="app-logo">
+          <div className="mb-10 px-1" data-testid="app-logo" onClick={() => navigate("/")}>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md grid place-items-center font-display font-black text-[14px]"
+              <div className="w-8 h-8 rounded-md grid place-items-center font-display font-black text-[14px] cursor-pointer"
                    style={{ background: "var(--teal)", color: "#04111A" }}>
                 SGR
               </div>
               <div>
                 <div className="font-display font-bold text-[17px] leading-none">Steam Game Recommender</div>
               </div>
-            </div>
-            <div className="mt-2 font-mono text-[9px] tracking-[0.2em] uppercase"
-                 style={{ color: "var(--teal-2)" }}>
-              System Rekomendacji Gier
             </div>
           </div>
 
