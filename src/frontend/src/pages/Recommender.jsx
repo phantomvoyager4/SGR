@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus } from "lucide-react";
-import { GAMES, USER } from "../data/games";
+import { USER } from "../data/games";
 import { SelectableLibraryCard } from "../components/GameCard";
 
 export default function Recommender() {
