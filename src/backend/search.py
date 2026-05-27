@@ -1,5 +1,4 @@
 import json
-import glob
 import os
 
 ACRONYMS = {
@@ -32,7 +31,9 @@ ACRONYMS = {
     "skyrim": "the elder scrolls v: skyrim",
     "poe": "path of exile",
     "hoi": "hearts of iron",
-    "wt": "war thunder"
+    "wt": "war thunder",
+    "wot": "world of tanks",
+    "fnaf": "five nights at freddy's"
 }
 
 game_index = []

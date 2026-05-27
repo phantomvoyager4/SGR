@@ -5,13 +5,39 @@ import os
 
 _df_cached = None
 _all_games_matrix_cached = None
+_all_games_matrix_normalized = None
+_name_to_index = None
+_names_cached = None
 
 def _load_data_if_needed():
-    global _df_cached, _all_games_matrix_cached
-    if _df_cached is None:
+    global _all_games_matrix_cached, _all_games_matrix_normalized, _name_to_index, _names_cached
+    if _all_games_matrix_normalized is None:
         path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'parquet', 'games_fully_vectorized.parquet')
-        _df_cached = pd.read_parquet(path)
-        _all_games_matrix_cached = _df_cached.drop(['index', 'name'], axis=1, errors='ignore').astype(float).to_numpy()
+        df = pd.read_parquet(path)
+        
+        # Build a fast mapping for row lookups
+        _names_cached = df['name'].to_numpy()
+        _name_to_index = {name: idx for idx, name in enumerate(_names_cached)}
+
+        _all_games_matrix_cached = df.drop(['index', 'name'], axis=1, errors='ignore').astype(np.float32).to_numpy()
+        
+        # Free memory forcibly to prevent Docker OOM
+        del df
+        import gc
+        gc.collect()
+        import ctypes
+        import ctypes.util
+        try:
+            libc = ctypes.CDLL(ctypes.util.find_library('c'))
+            libc.malloc_trim(0)
+        except Exception:
+            pass
+        
+        # Pre-normalize for instant cosine distance scoring
+        norms = np.linalg.norm(_all_games_matrix_cached, axis=1, keepdims=True)
+        # Avoid division by zero
+        norms[norms == 0] = 1.0
+        _all_games_matrix_normalized = _all_games_matrix_cached / norms
 
 def cs_recommender(movielist:list):
     """
@@ -20,32 +46,42 @@ def cs_recommender(movielist:list):
     vectors and return them as list of dictionaries: "game name": "similarity"
     """
     _load_data_if_needed()
-    df = _df_cached
-    all_games_matrix = _all_games_matrix_cached
-
-    movie_dfs = {}
+    
+    valid_vectors = []
+    
     for movie in movielist:
-        movie_dfs[movie] = df[df['name'] == movie]
-
-    vectors = movie_dfs
-    for key, value in vectors.items():
-        cleaned_df = value.drop(['index', 'name'], axis=1, errors='ignore')
-        vectors[key] = cleaned_df.astype(float).to_numpy()
-        
-    valid_vectors = [n for n in vectors.values() if n.shape[0] > 0]
+        idx = _name_to_index.get(movie)
+        if idx is not None:
+            valid_vectors.append(_all_games_matrix_cached[idx])
 
     if valid_vectors:
-        meaner = np.mean(valid_vectors, axis=0)
+        meaner = np.mean(valid_vectors, axis=0) # 1D array
         
-        similarities = cosine_similarity(meaner, all_games_matrix)
+        # Calculate cosine similarity using the pre-normalized matrix
+        meaner_norm = np.linalg.norm(meaner)
+        if meaner_norm == 0:
+            return []
+            
+        meaner_normalized = meaner / meaner_norm
+        
+        # dot product with (N, feats) @ (feats,) -> (N,)
+        similarities = np.dot(_all_games_matrix_normalized, meaner_normalized)
 
-        parq_results = df[['name']].copy()
-        parq_results['similarity'] = similarities[0]
-        
-        parq_results = parq_results[~parq_results['name'].isin(vectors.keys())]
-        
-        top_recommendations = parq_results[['name', 'similarity']].sort_values(by='similarity', ascending=False).head(20)
-        server_return = [{row.name: round(row.similarity, 2)} for row in top_recommendations.itertuples(index=False)]
+        # Exclude original movies by setting their similarity to -1
+        for movie in movielist:
+            idx = _name_to_index.get(movie)
+            if idx is not None:
+                similarities[idx] = -1.0
+                
+        # Use argpartition to get top 20 indices
+        k = min(20, len(similarities))
+        top_indices = np.argpartition(similarities, -k)[-k:]
+
+        # Sort the top 20 indices by actual similarity values
+        top_indices_sorted = top_indices[np.argsort(-similarities[top_indices])]
+
+        # Build the return dictionary
+        server_return = [{_names_cached[idx]: round(float(similarities[idx]), 2)} for idx in top_indices_sorted]
         return server_return
     return []
 
