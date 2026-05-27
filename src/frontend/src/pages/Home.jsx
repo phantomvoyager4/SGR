@@ -13,9 +13,11 @@ export default function Home() {
   const hero = GAMES.find((g) => g.id === "cyberpunk");
 
   const recommended = useMemo(() => {
-    const map = { RPG: ["elden-ring", "dark-souls-3", "baldurs-gate-3", "bloodborne"],
-                  FPS: ["doom-eternal", "call-of-juarez", "cyberpunk", "baldurs-gate-3"],
-                  Indie: ["hades", "hollow-knight", "lies-of-p", "elden-ring"] };
+    const map = {
+      RPG: ["elden-ring", "dark-souls-3", "baldurs-gate-3", "bloodborne"],
+      FPS: ["doom-eternal", "call-of-juarez", "cyberpunk", "baldurs-gate-3"],
+      Indie: ["hades", "hollow-knight", "lies-of-p", "elden-ring"]
+    };
     const ids = map[filter] || map.RPG;
     return ids.map((id) => GAMES.find((g) => g.id === id)).filter(Boolean);
   }, [filter]);
@@ -37,11 +39,11 @@ export default function Home() {
           onError={(e) => { e.target.src = hero.cover; }}
         />
         <div className="absolute inset-0"
-             style={{ background: "linear-gradient(90deg, rgba(5,8,15,0.95) 0%, rgba(5,8,15,0.7) 45%, rgba(5,8,15,0.3) 100%)" }} />
+          style={{ background: "linear-gradient(90deg, rgba(5,8,15,0.95) 0%, rgba(5,8,15,0.7) 45%, rgba(5,8,15,0.3) 100%)" }} />
         <div className="relative p-10 max-w-[60%]">
           <div className="flex items-center gap-3 mb-5">
             <span className="px-3 py-1 rounded-full font-mono text-[10px] uppercase tracking-wider font-bold"
-                  style={{ background: "var(--teal)", color: "#04111A" }}>
+              style={{ background: "var(--teal)", color: "#04111A" }}>
               Ultra Match
             </span>
             <span className="font-mono text-[11px] uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
@@ -63,12 +65,11 @@ export default function Home() {
               Szczegóły
             </button>
             <button
-              data-testid="hero-wishlist-btn"
-              className="flex items-center gap-2 h-12 px-7 rounded-full font-display font-bold text-[14px] border transition-colors hover:border-[color:var(--teal-dim)]"
+              onClick={() => navigate("/recommender")}
+              className="flex items-center gap-2 h-12 px-7 rounded-full font-display font-bold text-[14px] border transition-colors hover:border-[color:var(--teal-dim)] hover:scale-105"
               style={{ borderColor: "var(--border-hover)", background: "transparent", color: "white" }}
             >
-              <Plus size={16} />
-              Lista życzeń
+              Rekomender
             </button>
           </div>
         </div>
@@ -108,6 +109,12 @@ export default function Home() {
               Gatunek <ChevronDown size={14} />
             </button>
           </div>
+          <button 
+            onClick={() => navigate("/recommender")}
+            className="rounded-full font-display font-bold text-[14px] border transition-colors px-5 h-7"
+            style={{ background: "var(--teal)", borderColor: "var(--teal)", color: "#04111A" }}>
+            Pokaż więcej
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -123,7 +130,7 @@ export default function Home() {
       <section data-testid="activity-section" className="mb-10">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-full grid place-items-center"
-               style={{ background: "var(--panel-2)", border: "1px solid var(--border)" }}>
+            style={{ background: "var(--panel-2)", border: "1px solid var(--border)" }}>
             <Zap size={16} style={{ color: "var(--teal)" }} />
           </div>
           <div>
@@ -161,7 +168,7 @@ export default function Home() {
                     </span>
                     {g.discount > 0 && (
                       <span className="px-2 py-0.5 rounded font-mono text-[9px] uppercase font-bold"
-                            style={{ background: "rgba(94,234,212,0.15)", color: "var(--teal)" }}>
+                        style={{ background: "rgba(94,234,212,0.15)", color: "var(--teal)" }}>
                         -{g.discount}%
                       </span>
                     )}
