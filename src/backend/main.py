@@ -28,6 +28,10 @@ def get_games(ids: str):
     results = [g for g in game_index if str(g["id"]) in id_set]
     return results
 
+@app.get('/health')
+def health():
+    return {"status": "ok"}
+
 @app.get('/games_by_name')
 def get_games_by_name(names: str):
     load_data()
