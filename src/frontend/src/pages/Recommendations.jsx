@@ -5,6 +5,7 @@ import { GAMES, PLATFORMS, GENRES } from "../data/games";
 import { RecGameCard } from "../components/GameCard";
 
 export default function Recommendations() {
+  const [serverStatus, setServerStatus] = useState("Łączenie z serwerem...");
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const basedOnStr = params.get("based") || "";
@@ -25,6 +26,14 @@ export default function Recommendations() {
     const { signal } = abortController;
     
     setLoading(true);
+    setServerStatus("Łączenie z serwerem...");
+
+    fetch("http://localhost:8000/health", { signal })
+      .then((res) => {
+        if (res.ok) setServerStatus("Serwer online. Dopasowywanie wektorów...");
+        else setServerStatus("Serwer zgłasza błędy wewnętrzne.");
+      })
+      .catch(() => setServerStatus("Serwer offline. Sprawdź terminal backendu."));
     
     // Construct query parameters for FastAPI Query list
     const queryParams = basedTitles.map(t => `movie_list=${encodeURIComponent(t)}`).join('&');
@@ -233,12 +242,12 @@ export default function Recommendations() {
         {/* Results */}
         <div>
           {loading ? (
-            <div className="rounded-2xl border p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
-              <div className="w-10 h-10 border-4 border-t-[color:var(--teal)] rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--teal)" }}></div>
-              <div className="font-display font-bold text-[18px]">Generowanie rekomendacji...</div>
-              <p className="text-[14px] text-[color:var(--text-dim)]">Nasz model sztucznej inteligencji dopasowuje podobne pozycje do Twojej bazy...</p>
-            </div>
-          ) : recs.length === 0 ? (
+              <div className="rounded-2xl border p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+                <div className="w-10 h-10 border-4 border-t-[color:var(--teal)] rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--teal)" }}></div>
+                <div className="font-display font-bold text-[18px]">Generowanie rekomendacji...</div>
+                <p className="text-[14px] text-[color:var(--text-dim)]">{serverStatus}</p>
+              </div>
+            ) : recs.length === 0 ? (
             <div
               data-testid="empty-results"
               className="rounded-2xl border p-12 text-center"

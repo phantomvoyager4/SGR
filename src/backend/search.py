@@ -43,7 +43,7 @@ def load_data():
     global game_index, is_loaded
     if is_loaded: return
     is_loaded = True
-    
+
     path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'search_index.json')
     if os.path.exists(path):
         with open(path, 'r', encoding='utf-8') as f:

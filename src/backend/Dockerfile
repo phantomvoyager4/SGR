@@ -6,8 +6,9 @@ COPY src/backend/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ /app/src/
-COPY data/ /app/data/
+COPY src/backend /app/src/
+COPY data/search_index.json /app/data/
+COPY data/parquet/ /app/data/parquet/
 
 EXPOSE 8000
 
