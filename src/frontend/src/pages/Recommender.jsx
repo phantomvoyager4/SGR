@@ -10,13 +10,28 @@ export default function Recommender() {
   const [q, setQ] = useState("");
   const [library, setLibrary] = useState([]);
   const [selectedGames, setSelectedGames] = useState([]);
+  const [ratings, setRatings] = useState({});
 
   const toggle = (id) => {
     const strId = String(id);
     const next = new Set(selected);
-    next.has(strId) ? next.delete(strId) : next.add(strId);
+    if (next.has(strId)) {
+      next.delete(strId);
+      setRatings(prev => {
+        const updated = { ...prev };
+        delete updated[strId];
+        return updated;
+      });
+    } else {
+      next.add(strId);
+    }
     setSelected(next);
   };
+
+  const ratedCount = Object.keys(ratings).length;
+  const isRatingMode = ratedCount > 0;
+  const allRated = ratedCount === selected.size;
+  const canGenerate = selected.size >= 2 && (!isRatingMode || allRated);
 
   React.useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -59,12 +74,15 @@ export default function Recommender() {
   }, [selected]);
 
   const handleGenerate = () => {
-    if (selected.size < 2) return;
-    const titles = selectedGames.map((g) => g.title).join("||");
-    navigate(`/recommendations?based=${encodeURIComponent(titles)}`);
+    if (!canGenerate) return;
+    const payload = selectedGames.map((g) => {
+      const r = ratings[g.id] || 1; 
+      return `${g.title}::${r}`;
+    }).join("||");
+    navigate(`/recommendations?payload=${encodeURIComponent(payload)}`);
   };
 
-  const canGenerate = selected.size >= 2;
+
 
   return (
     <div className="max-w-[1400px] mx-auto fade-up">
@@ -129,35 +147,35 @@ export default function Recommender() {
           </div>
           <div className="flex gap-4 flex-wrap">
             {selectedGames.filter(g => selected.has(String(g.id))).map((g) => (
-              <div className="flex flex-col items-center bg-black w-[220px] h-[160px] rounded-2xl pt-2 gap-3" style={{ background: "var(--panel)"}}>
-              <div
-                key={g.id}
-                data-testid={`selected-${g.id}`}
-                onClick={() => toggle(g.id)}
-                className="w-[200px] aspect-[460/215] rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 bg-[#0A1018]"
-                style={{ borderColor: "var(--teal)", boxShadow: "0 0 20px -4px rgba(94, 234, 212, 0.5)" }}
-              >
-                <img
-                  src={g.cover}
-                  alt={g.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.src = `https://placehold.co/460x215/0F1624/5EEAD4?text=${encodeURIComponent(g.title)}`; }}
-                />
-              </div>
-              <div className="flex flex-col items-center w-full px-4 gap-2">
-                <label htmlFor={`rating-${g.id}`} className="text-white text-xs mb-1">
-                  Oceń tytuł w skali 1-10: <span>{g.rating || 5}</span>
-                </label>
-                <input
-                  id={`rating-${g.id}`}
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="1"
-                  value={g.rating || 5}
-                  className="w-full accent-teal-400 cursor-pointer"
-                />
-              </div>
+              <div key={g.id} className="flex flex-col items-center bg-black w-[220px] h-[200px] rounded-2xl pt-4 gap-3" style={{ background: "var(--panel)"}}>
+                <div
+                  data-testid={`selected-${g.id}`}
+                  onClick={() => toggle(g.id)}
+                  className="w-[200px] aspect-[460/215] rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 bg-[#0A1018] shrink-0"
+                  style={{ borderColor: "var(--teal)", boxShadow: "0 0 20px -4px rgba(94, 234, 212, 0.5)" }}
+                >
+                  <img
+                    src={g.cover}
+                    alt={g.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.src = `https://placehold.co/460x215/0F1624/5EEAD4?text=${encodeURIComponent(g.title)}`; }}
+                  />
+                </div>
+                <div className="flex flex-col w-full px-4 gap-2">
+                  <label htmlFor={`rating-${g.id}`} className="text-white text-sm mb-1">
+                    Oceń grę w skali 1-10. <br /><span>Twoja ocena: {ratings[g.id] || <i>Nie zaznaczono</i>}</span>
+                  </label>
+                  <input
+                    id={`rating-${g.id}`}
+                    type="range"
+                    min="1"
+                    max="10"
+                    step="1"
+                    value={ratings[g.id] || 1}
+                    onChange={(e) => setRatings({ ...ratings, [g.id]: parseInt(e.target.value) })}
+                    className={`w-full cursor-pointer transition-opacity duration-300 ${ratings[g.id] ? "accent-teal-400 opacity-100" : "accent-gray-600 opacity-40 hover:opacity-80"}`}
+                  />
+                </div>
               </div>
             ))}
           </div>

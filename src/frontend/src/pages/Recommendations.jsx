@@ -8,8 +8,16 @@ export default function Recommendations() {
   const [serverStatus, setServerStatus] = useState("Łączenie z serwerem...");
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const basedOnStr = params.get("based") || "";
-  const basedTitles = basedOnStr.split("||").filter(Boolean);
+  
+  const payloadStr = params.get("payload") || "";
+  const parsedPairs = useMemo(() => {
+    return payloadStr.split("||").filter(Boolean).map(pair => {
+      const [title, rating] = pair.split("::");
+      return { title, rating: Number(rating) };
+    });
+  }, [payloadStr]);
+
+  const basedTitles = useMemo(() => parsedPairs.map(p => p.title), [parsedPairs]);
   const basedOn = basedTitles.join(", ") || "Wybierz gry, aby wygenerować rekomendacje";
 
   const [priceRange, setPriceRange] = useState(300);
@@ -35,35 +43,37 @@ export default function Recommendations() {
       })
       .catch(() => setServerStatus("Serwer offline. Sprawdź terminal backendu."));
     
-    // Construct query parameters for FastAPI Query list
-    const queryParams = basedTitles.map(t => `movie_list=${encodeURIComponent(t)}`).join('&');
+    const postPayload = parsedPairs.map(p => ({ [p.title]: p.rating }));
     
-    fetch(`http://localhost:8000/recommender?${queryParams}`, { signal })
+    fetch(`http://localhost:8000/recommender`, { 
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ movie_list: postPayload }),
+      signal 
+    })
       .then(res => res.json())
       .then(data => {
-        // data is a list of dicts: [ {"Game A": 0.95}, {"Game B": 0.92} ]
         const formatted = data.map(item => {
           const gameName = Object.keys(item)[0];
           const similarity = item[gameName];
           return { name: gameName, match: Math.round(similarity * 100) };
         });
         
-        // Now fetch details for these games from backend
         const namesQuery = formatted.map(g => g.name).join("||");
         return fetch(`http://localhost:8000/games_by_name?names=${encodeURIComponent(namesQuery)}`, { signal })
           .then(res => res.json())
           .then(details => {
-             // Merge details with match score
              const merged = formatted.map(rec => {
-               // find corresponding game detail
                const detail = details.find(d => d.title === rec.name);
                return {
                   id: detail ? detail.id : rec.name,
                   title: rec.name,
                   match: rec.match,
-                  cover: detail ? detail.cover : "", // fallback cover handled in card
+                  cover: detail ? detail.cover : "",
                   tag: detail && detail.genre ? detail.genre[0] : "INNE",
-                  price: 0, // Placeholder
+                  price: 0,
                   discount: 0,
                   rating: 8.5,
                   platforms: ["pc"],
@@ -83,11 +93,10 @@ export default function Recommendations() {
         }
       });
       
-    // Cleanup function when the component unmounts or basedOnStr changes
     return () => {
       abortController.abort();
     };
-  }, [basedOnStr]);
+  }, [payloadStr]);
 
   const togglePlatform = (id) => setPlatforms((p) => ({ ...p, [id]: !p[id] }));
   const toggleGenre = (g) => setGenres((x) => ({ ...x, [g]: !x[g] }));
@@ -101,19 +110,16 @@ export default function Recommendations() {
   const recs = useMemo(() => {
     let list = [...recsData];
 
-    // price filter 
     list = list.filter((g) => {
       const final = g.price * (1 - g.discount / 100);
       return final <= priceRange;
     });
 
-    // platform filter 
     const activePlatforms = Object.keys(platforms).filter((k) => platforms[k]);
     if (activePlatforms.length > 0) {
       list = list.filter((g) => activePlatforms.some((p) => g.platforms.includes(p)));
     }
 
-    // genre filter
     const activeGenres = Object.keys(genres).filter((k) => genres[k]);
     if (activeGenres.length > 0) {
       list = list.filter((g) =>
@@ -146,7 +152,6 @@ export default function Recommendations() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8">
-        {/* Filters */}
         <aside
           data-testid="filters-panel"
           className="rounded-2xl border p-6 h-fit sticky top-4"
@@ -164,7 +169,6 @@ export default function Recommendations() {
             </button>
           </div>
 
-          {/* Price */}
           <div className="mb-7">
             <div className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3"
                  style={{ color: "var(--text-faint)" }}>
@@ -185,7 +189,6 @@ export default function Recommendations() {
             </div>
           </div>
 
-          {/* Platforms */}
           <div className="mb-7">
             <div className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3"
                  style={{ color: "var(--text-faint)" }}>
@@ -213,7 +216,6 @@ export default function Recommendations() {
             </div>
           </div>
 
-          {/* Genres */}
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3"
                  style={{ color: "var(--text-faint)" }}>
@@ -239,7 +241,6 @@ export default function Recommendations() {
           </div>
         </aside>
 
-        {/* Results */}
         <div>
           {loading ? (
               <div className="rounded-2xl border p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
@@ -272,5 +273,3 @@ export default function Recommendations() {
     </div>
   );
 }
-
-

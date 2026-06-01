@@ -30,11 +30,17 @@ def cs_recommender(movielist: list):
     _load_data_if_needed()
     
     valid_vectors = []
+    valid_names = []
     
-    for movie in movielist:
-        idx = _name_to_index.get(movie)
-        if idx is not None:
-            valid_vectors.append(_all_games_matrix_normalized[idx])
+    for item in movielist:
+        for movie, rating in item.items():
+            idx = _name_to_index.get(movie)
+            if idx is not None:
+                # Apply weighted scaling based on rating
+                weight = float(rating) / 10.0
+                scaled_vector = _all_games_matrix_normalized[idx] * weight
+                valid_vectors.append(scaled_vector)
+                valid_names.append(movie)
 
     if not valid_vectors:
         return []
@@ -49,7 +55,7 @@ def cs_recommender(movielist: list):
     
     similarities = np.dot(_all_games_matrix_normalized, meaner_normalized)
 
-    for movie in movielist:
+    for movie in valid_names:
         idx = _name_to_index.get(movie)
         if idx is not None:
             similarities[idx] = -1.0
