@@ -129,11 +129,12 @@ export default function Recommender() {
           </div>
           <div className="flex gap-4 flex-wrap">
             {selectedGames.filter(g => selected.has(String(g.id))).map((g) => (
+              <div className="flex flex-col items-center bg-black w-[220px] h-[160px] rounded-2xl pt-2 gap-3" style={{ background: "var(--panel)"}}>
               <div
                 key={g.id}
                 data-testid={`selected-${g.id}`}
                 onClick={() => toggle(g.id)}
-                className="w-[180px] aspect-[460/215] rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 bg-[#0A1018]"
+                className="w-[200px] aspect-[460/215] rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 bg-[#0A1018]"
                 style={{ borderColor: "var(--teal)", boxShadow: "0 0 20px -4px rgba(94, 234, 212, 0.5)" }}
               >
                 <img
@@ -142,6 +143,21 @@ export default function Recommender() {
                   className="w-full h-full object-cover"
                   onError={(e) => { e.target.src = `https://placehold.co/460x215/0F1624/5EEAD4?text=${encodeURIComponent(g.title)}`; }}
                 />
+              </div>
+              <div className="flex flex-col items-center w-full px-4 gap-2">
+                <label htmlFor={`rating-${g.id}`} className="text-white text-xs mb-1">
+                  Oceń tytuł w skali 1-10: <span>{g.rating || 5}</span>
+                </label>
+                <input
+                  id={`rating-${g.id}`}
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={g.rating || 5}
+                  className="w-full accent-teal-400 cursor-pointer"
+                />
+              </div>
               </div>
             ))}
           </div>
