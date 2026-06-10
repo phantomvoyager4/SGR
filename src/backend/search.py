@@ -41,7 +41,8 @@ is_loaded = False
 
 def load_data():
     global game_index, is_loaded
-    if is_loaded: return
+    if is_loaded:
+        return
     is_loaded = True
 
     path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'search_index.json')
@@ -51,6 +52,63 @@ def load_data():
             game_index.extend(json.load(f))
     else:
         game_index.clear()
+
+    price_map = {}
+    discount_map = {}
+    prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_informations')
+    if os.path.isdir(prices_dir):
+        for fname in os.listdir(prices_dir):
+            if not fname.startswith('games_chunk_') or not fname.endswith('.jsonl'):
+                continue
+            fpath = os.path.join(prices_dir, fname)
+            try:
+                with open(fpath, 'r', encoding='utf-8') as pf:
+                    for line in pf:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+
+                        try:
+                            game_id_str, info = next(iter(obj.items()))
+                        except Exception:
+                            continue
+
+                        if not isinstance(info, dict):
+                            continue
+
+                        po = info.get('price_overview')
+                        if not po or not isinstance(po, dict):
+                            continue
+
+                        final = po.get('final')
+                        if final is None:
+                            continue
+
+                        try:
+                            fval = float(final)
+                            price_pln = fval / 100.0
+                            if price_pln > 1000:
+                                price_pln = fval / 10000.0
+                            price_map[str(game_id_str)] = round(price_pln, 2)
+                            discount_map[str(game_id_str)] = int(po.get('discount_percent') or 0)
+                        except Exception:
+                            continue
+            except Exception:
+
+                continue
+
+    for g in game_index:
+        gid = str(g.get('id') or g.get('appid') or '')
+        if gid in price_map:
+            g['price'] = price_map[gid]
+            g['discount'] = discount_map.get(gid, 0)
+        else:
+            g.setdefault('price', 0.0)
+            g.setdefault('discount', 0)
 
 def search_games(query: str, limit=50):
     if not is_loaded:

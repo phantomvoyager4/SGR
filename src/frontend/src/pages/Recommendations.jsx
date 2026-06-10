@@ -96,10 +96,10 @@ export default function Recommendations() {
                 match: rec.match,
                 cover: detail ? detail.cover : "",
                 tag: detail && detail.genre ? detail.genre[0] : "INNE",
-                price: 0,
-                discount: 0,
-                rating: 8.5,
-                platforms: ["pc"],
+                price: detail && (typeof detail.price !== 'undefined') ? detail.price : 0,
+                discount: detail && (typeof detail.discount !== 'undefined') ? detail.discount : 0,
+                rating: detail && (typeof detail.rating !== 'undefined') ? detail.rating : 8.5,
+                platforms: detail && detail.platforms ? detail.platforms : ["pc"],
                 genre: detail ? detail.genre : [],
               };
             });
