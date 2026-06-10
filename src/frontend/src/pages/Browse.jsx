@@ -11,11 +11,15 @@ export default function Browse() {
   const [active, setActive] = useState("Wszystko");
 
   const filtered = useMemo(() => {
-    let list = GAMES.filter((g) => g.title.toLowerCase().includes(q.toLowerCase()));
+    let list = GAMES.filter((g) =>
+      g.title.toLowerCase().includes(q.toLowerCase()),
+    );
     if (active !== "Wszystko") {
-      list = list.filter((g) =>
-        g.genre.some((gn) => gn.toLowerCase().includes(active.toLowerCase())) ||
-        g.tag.toLowerCase() === active.toLowerCase()
+      list = list.filter(
+        (g) =>
+          g.genre.some((gn) =>
+            gn.toLowerCase().includes(active.toLowerCase()),
+          ) || g.tag.toLowerCase() === active.toLowerCase(),
       );
     }
     return list;
@@ -25,9 +29,12 @@ export default function Browse() {
 
   return (
     <div className="max-w-[1400px] mx-auto fade-up">
-      <h1 className="font-display font-black text-[44px] leading-none mb-3">Przeglądaj gry</h1>
+      <h1 className="font-display font-black text-[44px] leading-none mb-3">
+        Przeglądaj gry
+      </h1>
       <p className="text-[15px] mb-8" style={{ color: "var(--text-dim)" }}>
-        Odkryj tytuły dopasowane do Twoich gustów — od klasyków po najnowsze premiery.
+        Odkryj tytuły dopasowane do Twoich gustów — od klasyków po najnowsze
+        premiery.
       </p>
 
       <div className="mb-8 flex flex-wrap gap-6 items-center justify-between">
@@ -58,8 +65,12 @@ export default function Browse() {
         </div>
       </div>
 
-      <div className="mb-4 font-mono text-[11px] uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>
-        Znaleziono: <span style={{ color: "var(--teal)" }}>{filtered.length}</span> tytułów
+      <div
+        className="mb-4 font-mono text-[11px] uppercase tracking-wider"
+        style={{ color: "var(--text-faint)" }}
+      >
+        Znaleziono:{" "}
+        <span style={{ color: "var(--teal)" }}>{filtered.length}</span> tytułów
       </div>
 
       {filtered.length === 0 ? (
@@ -68,13 +79,24 @@ export default function Browse() {
           className="rounded-2xl border p-12 text-center"
           style={{ background: "var(--panel)", borderColor: "var(--border)" }}
         >
-          <div className="font-display font-bold text-[20px] mb-2">Brak gier pasujących do zapytania</div>
-          <p className="text-[14px]" style={{ color: "var(--text-dim)" }}>Spróbuj innego słowa kluczowego lub wyczyść filtry.</p>
+          <div className="font-display font-bold text-[20px] mb-2">
+            Brak gier pasujących do zapytania
+          </div>
+          <p className="text-[14px]" style={{ color: "var(--text-dim)" }}>
+            Spróbuj innego słowa kluczowego lub wyczyść filtry.
+          </p>
         </div>
       ) : (
-        <div data-testid="browse-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        <div
+          data-testid="browse-grid"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"
+        >
           {filtered.map((g, i) => (
-            <div key={g.id} className="fade-up" style={{ animationDelay: `${i * 40}ms` }}>
+            <div
+              key={g.id}
+              className="fade-up"
+              style={{ animationDelay: `${i * 40}ms` }}
+            >
               <GameCard game={g} onClick={() => navigate("/recommender")} />
             </div>
           ))}
@@ -83,5 +105,3 @@ export default function Browse() {
     </div>
   );
 }
-
-

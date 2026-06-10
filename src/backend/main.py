@@ -1,7 +1,12 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from cosine_similarity import cs_recommender
 from search import search_games, game_index, load_data
+from pydantic import BaseModel
+from typing import List, Dict
+
+class RecommenderPayload(BaseModel):
+    movie_list: List[Dict[str, float]]
 
 app = FastAPI()
 
@@ -40,12 +45,10 @@ def get_games_by_name(names: str):
     results = [g for g in game_index if g["title"].lower() in name_set]
     return results
 
-@app.get('/recommender')
-def recommend(movie_list: list = Query(...)):
-    response = cs_recommender(movielist=movie_list)
+@app.post('/recommender')
+def recommend(payload: RecommenderPayload):
+    response = cs_recommender(movielist=payload.movie_list)
     return response
-
-
 
 # kill -9 $(lsof -t -i:8000)
 # uvicorn main:app --reload --port 8000
