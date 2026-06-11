@@ -2,7 +2,13 @@ from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from cosine_similarity import cs_recommender
 from search import search_games, game_index, load_data, get_game_details, get_price_history
-from discount_prediction import get_price_predictions
+
+try:
+    from discount_prediction import get_price_predictions
+except ImportError:
+    def get_price_predictions(game_id: str, days_ahead: int = 90):
+        return {}
+
 from pydantic import BaseModel
 from typing import List, Dict
 
