@@ -234,7 +234,7 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-display font-bold text-[14px]">
-                      {(g.price * (1 - g.discount / 100)).toFixed(2)} zł
+                      {(g.price * (1 - g.discount / 100)).toFixed(2)} {g.currency || 'PLN'}
                     </span>
                     {g.discount > 0 && (
                       <span

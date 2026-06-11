@@ -98,6 +98,7 @@ export default function Recommendations() {
                 tag: detail && detail.genre ? detail.genre[0] : "INNE",
                 price: detail && (typeof detail.price !== 'undefined') ? detail.price : 0,
                 discount: detail && (typeof detail.discount !== 'undefined') ? detail.discount : 0,
+                currency: detail && detail.currency ? detail.currency : 'PLN',
                 rating: detail && (typeof detail.rating !== 'undefined') ? detail.rating : 8.5,
                 platforms: detail && detail.platforms ? detail.platforms : ["pc"],
                 genre: detail ? detail.genre : [],

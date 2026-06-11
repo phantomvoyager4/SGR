@@ -55,6 +55,7 @@ def load_data():
 
     price_map = {}
     discount_map = {}
+    currency_map = {}
     prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_informations')
     if os.path.isdir(prices_dir):
         for fname in os.listdir(prices_dir):
@@ -91,10 +92,9 @@ def load_data():
                         try:
                             fval = float(final)
                             price_pln = fval / 100.0
-                            if price_pln > 1000:
-                                price_pln = fval / 10000.0
                             price_map[str(game_id_str)] = round(price_pln, 2)
                             discount_map[str(game_id_str)] = int(po.get('discount_percent') or 0)
+                            currency_map[str(game_id_str)] = po.get('currency', 'PLN')
                         except Exception:
                             continue
             except Exception:
@@ -106,9 +106,11 @@ def load_data():
         if gid in price_map:
             g['price'] = price_map[gid]
             g['discount'] = discount_map.get(gid, 0)
+            g['currency'] = currency_map.get(gid, 'PLN')
         else:
-            g.setdefault('price', 0.0)
+            g.setdefault('price', 'Free')
             g.setdefault('discount', 0)
+            g.setdefault('currency', 'PLN')
 
 def search_games(query: str, limit=50):
     if not is_loaded:

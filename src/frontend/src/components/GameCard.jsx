@@ -16,6 +16,7 @@ const tagColor = (tag) => {
 export function GameCard({ game, onClick }) {
   const t = tagColor(game.tag);
   const finalPrice = game.discount > 0 ? (game.price * (1 - game.discount / 100)).toFixed(2) : game.price.toFixed(2);
+  const currency = game.currency || 'PLN';
 
   return (
     <div
@@ -47,10 +48,10 @@ export function GameCard({ game, onClick }) {
           <div className="flex items-baseline gap-2">
             {game.discount > 0 && (
               <span className="font-mono text-[10px] line-through" style={{ color: "var(--text-faint)" }}>
-                {game.price.toFixed(2)} zł
+                {game.price.toFixed(2)} {currency}
               </span>
             )}
-            <span className="font-display font-bold text-[15px]">{finalPrice} zł</span>
+            <span className="font-display font-bold text-[15px]">{finalPrice} {currency}</span>
           </div>
           <div className="flex gap-1.5" style={{ color: "var(--text-dim)" }}>
             {game.platforms.includes("ps5") && <Gamepad2 size={14} />}
@@ -102,6 +103,7 @@ export function FavoriteCard({ game }) {
 
 export function RecGameCard({ game, match = 95, onMore }) {
   const finalPrice = game.discount > 0 ? (game.price * (1 - game.discount / 100)).toFixed(2) : game.price.toFixed(2);
+  const currency = game.currency || 'PLN';
   return (
     <div
       data-testid={`rec-game-${game.id}`}
@@ -133,7 +135,7 @@ export function RecGameCard({ game, match = 95, onMore }) {
           </div>
           <div className="text-right">
             <div className="font-display font-bold text-[18px]" style={{ color: "var(--purple-2)" }}>
-              {finalPrice} PLN
+              {finalPrice} {currency}
             </div>
             {game.discount > 0 && (
               <div className="font-mono text-[10px]" style={{ color: "var(--teal)" }}>-{game.discount}%</div>
@@ -143,7 +145,7 @@ export function RecGameCard({ game, match = 95, onMore }) {
         <div className="flex items-center gap-1 mb-4 text-[11px]" style={{ color: "var(--text-faint)" }}>
           <span className="font-mono" style={{ color: "#FDE047" }}>★ {game.rating.toFixed(1)}</span>
           <span className="mx-1">·</span>
-          <span>Cena regularna: {game.price.toFixed(2)} zł</span>
+          <span>Cena regularna: {game.price.toFixed(2)} {currency}</span>
         </div>
         <button
           data-testid={`rec-more-${game.id}`}
