@@ -97,7 +97,7 @@ export default function Browse() {
               className="fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
-              <GameCard game={g} onClick={() => navigate("/recommender")} />
+              <GameCard game={g} onClick={() => navigate(`/game/${g.id}`)} />
             </div>
           ))}
         </div>

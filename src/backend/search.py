@@ -128,3 +128,49 @@ def search_games(query: str, limit=50):
             if len(results) >= limit:
                 break
     return results
+
+def get_game_details(game_id: str):
+    if not is_loaded:
+        load_data()
+    
+    for game in game_index:
+        if str(game.get('id') or game.get('appid') or '') == game_id:
+            return game
+    
+    return {}
+
+def get_price_history(game_id: str):
+    history = []
+    prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_prices')
+    
+    if not os.path.isdir(prices_dir):
+        return {"dates": [], "prices": []}
+    
+    for fname in sorted(os.listdir(prices_dir)):
+        if not fname.startswith('price_data_chunk_') or not fname.endswith('.jsonl'):
+            continue
+        
+        fpath = os.path.join(prices_dir, fname)
+        try:
+            with open(fpath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        if game_id in obj and isinstance(obj[game_id], list):
+                            for entry in obj[game_id]:
+                                if isinstance(entry, dict):
+                                    for date, price in entry.items():
+                                        history.append({"date": date, "price": price})
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            continue
+    
+    history.sort(key=lambda x: x["date"])
+    dates = [h["date"] for h in history]
+    prices = [h["price"] for h in history]
+    
+    return {"dates": dates, "prices": prices}

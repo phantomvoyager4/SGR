@@ -355,7 +355,7 @@ export default function Recommendations() {
                   <RecGameCard
                     game={g}
                     match={g.match}
-                    onMore={() => navigate("/browse")}
+                    onMore={() => navigate(`/game/${g.id}`)}
                   />
                 </div>
               ))}
