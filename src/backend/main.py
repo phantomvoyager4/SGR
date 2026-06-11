@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from cosine_similarity import cs_recommender
-from search import search_games, game_index, load_data
+from search import search_games, game_index, load_data, get_game_details, get_price_history
+from discount_prediction import get_price_predictions
 from pydantic import BaseModel
 from typing import List, Dict
 
@@ -49,6 +50,19 @@ def get_games_by_name(names: str):
 def recommend(payload: RecommenderPayload):
     response = cs_recommender(movielist=payload.movie_list)
     return response
+
+@app.get('/game/{game_id}')
+def get_game(game_id: str):
+    load_data()
+    return get_game_details(game_id)
+
+@app.get('/game/{game_id}/price-history')
+def get_game_price_history(game_id: str):
+    return get_price_history(game_id)
+
+@app.get('/game/{game_id}/price-predictions')
+def get_game_predictions(game_id: str, days: int = 90):
+    return get_price_predictions(game_id, days_ahead=days)
 
 # kill -9 $(lsof -t -i:8000)
 # uvicorn main:app --reload --port 8000

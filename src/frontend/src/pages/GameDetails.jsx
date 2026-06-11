@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GAMES } from "../data/games";
 
@@ -6,6 +6,31 @@ export default function GameDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const game = GAMES.find((g) => g.id === id);
+  const [details, setDetails] = useState(null);
+  const [priceHistory, setPriceHistory] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const detailsRes = await fetch(`http://localhost:8000/game/${id}`);
+        const detailsData = await detailsRes.json();
+        setDetails(detailsData);
+
+        const priceRes = await fetch(`http://localhost:8000/game/${id}/price-history`);
+        const priceData = await priceRes.json();
+        setPriceHistory(priceData);
+      } catch (err) {
+        console.error("Failed to fetch game details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (game) {
+      fetchData();
+    }
+  }, [id, game]);
 
   if (!game) {
     return (
@@ -56,7 +81,7 @@ export default function GameDetails() {
                 <div className="mb-6">
                   <div className="font-mono text-[12px]" style={{ color: "var(--text-faint)" }}>Opis</div>
                   <p className="mt-2 text-[14px]" style={{ color: "var(--text-dim)" }}>
-                    Brak szczegółowego opisu — przykładowe dane. Wyświetlane są podstawowe informacje o grze.
+                    {loading ? "Ładowanie..." : details?.about_the_game || "Brak dostępnego opisu gry."}
                   </p>
                 </div>
               </div>
@@ -81,6 +106,37 @@ export default function GameDetails() {
           </aside>
         </div>
       </div>
+
+      {priceHistory && priceHistory.dates.length > 0 && (
+        <div className="mt-8 rounded-2xl overflow-hidden border p-6" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+          <h2 className="font-display font-bold text-[24px] mb-6">Historia cen</h2>
+          <div className="w-full h-80 bg-gradient-to-b from-[rgba(139,92,246,0.1)] to-transparent rounded-lg p-4 flex items-end justify-start gap-1 overflow-x-auto">
+            {priceHistory.prices.map((price, idx) => {
+              const minPrice = Math.min(...priceHistory.prices);
+              const maxPrice = Math.max(...priceHistory.prices);
+              const range = maxPrice - minPrice || 1;
+              const height = ((price - minPrice) / range) * 100;
+              return (
+                <div
+                  key={idx}
+                  className="flex-1 min-w-[3px] rounded-t-sm transition-all hover:bg-teal-500"
+                  style={{
+                    height: `${Math.max(height, 5)}%`,
+                    background: "var(--teal)",
+                    opacity: 0.7,
+                  }}
+                  title={`${priceHistory.dates[idx]}: ${price} zł`}
+                />
+              );
+            })}
+          </div>
+          <div className="mt-4 flex items-center justify-between text-[12px]" style={{ color: "var(--text-faint)" }}>
+            <span>{priceHistory.dates[0]}</span>
+            <span>Min: {Math.min(...priceHistory.prices).toFixed(2)} zł • Max: {Math.max(...priceHistory.prices).toFixed(2)} zł</span>
+            <span>{priceHistory.dates[priceHistory.dates.length - 1]}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
