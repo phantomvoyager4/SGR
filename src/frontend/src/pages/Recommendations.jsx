@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { RotateCcw } from "lucide-react";
-import { GAMES, PLATFORMS, GENRES } from "../data/games";
+import { RotateCcw, Plus } from "lucide-react";
+import { PLATFORMS } from "../data/games";
 import { RecGameCard } from "../components/GameCard";
 
 export default function Recommendations() {
@@ -24,8 +24,7 @@ export default function Recommendations() {
     () => parsedPairs.map((p) => p.title),
     [parsedPairs],
   );
-  const basedOn =
-    basedTitles.join(", ") || "Wybierz gry, aby wygenerować rekomendacje";
+  const basedOn = basedTitles.join(", ") || "Wybierz gry, aby wygenerować rekomendacje";
 
   const [priceRange, setPriceRange] = useState(300);
   const [platforms, setPlatforms] = useState({
@@ -44,37 +43,35 @@ export default function Recommendations() {
 
   const [recsData, setRecsData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const LIMIT = 15;
 
-  React.useEffect(() => {
-    if (basedTitles.length === 0) return;
-
-    const abortController = new AbortController();
-    const { signal } = abortController;
-
-    setLoading(true);
-    setServerStatus("Łączenie z serwerem...");
-
-    fetch("http://localhost:8000/health", { signal })
-      .then((res) => {
-        if (res.ok) setServerStatus("Serwer online. Dopasowywanie wektorów...");
-        else setServerStatus("Serwer zgłasza błędy wewnętrzne.");
-      })
-      .catch(() =>
-        setServerStatus("Serwer offline. Sprawdź terminal backendu."),
-      );
+  const fetchData = (currentOffset) => {
+    if (currentOffset === 0) {
+      setLoading(true);
+      setServerStatus("Łączenie z serwerem. Dopasowywanie wektorów...");
+    } else {
+      setLoadingMore(true);
+    }
 
     const postPayload = parsedPairs.map((p) => ({ [p.title]: p.rating }));
 
     fetch(`http://localhost:8000/recommender`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ movie_list: postPayload }),
-      signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ movie_list: postPayload, limit: LIMIT, offset: currentOffset }),
     })
       .then((res) => res.json())
       .then((data) => {
+        if (data.length < LIMIT) setHasMore(false);
+        if (data.length === 0) {
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+
         const formatted = data.map((item) => {
           const gameName = Object.keys(item)[0];
           const similarity = item[gameName];
@@ -82,10 +79,7 @@ export default function Recommendations() {
         });
 
         const namesQuery = formatted.map((g) => g.name).join("||");
-        return fetch(
-          `http://localhost:8000/games_by_name?names=${encodeURIComponent(namesQuery)}`,
-          { signal },
-        )
+        return fetch(`http://localhost:8000/games_by_name?names=${encodeURIComponent(namesQuery)}`)
           .then((res) => res.json())
           .then((details) => {
             const merged = formatted.map((rec) => {
@@ -95,31 +89,34 @@ export default function Recommendations() {
                 title: rec.name,
                 match: rec.match,
                 cover: detail ? detail.cover : "",
-                tag: detail && detail.genre ? detail.genre[0] : "INNE",
+                tag: detail && detail.genre && detail.genre.length > 0 ? detail.genre[0] : "INNE",
                 price: detail && (typeof detail.price !== 'undefined') ? detail.price : 0,
                 discount: detail && (typeof detail.discount !== 'undefined') ? detail.discount : 0,
                 currency: detail && detail.currency ? detail.currency : 'PLN',
-                rating: detail && (typeof detail.rating !== 'undefined') ? detail.rating : 8.5,
+                rating: detail && (typeof detail.rating !== 'undefined') ? detail.rating : NaN,
                 platforms: detail && detail.platforms ? detail.platforms : ["pc"],
                 genre: detail ? detail.genre : [],
               };
             });
-            setRecsData(merged);
+
+            setRecsData((prev) => (currentOffset === 0 ? merged : [...prev, ...merged]));
             setLoading(false);
+            setLoadingMore(false);
           });
       })
       .catch((err) => {
-        if (err.name === "AbortError") {
-          console.log("Request aborted");
-        } else {
-          console.error(err);
-          setLoading(false);
-        }
+        console.error(err);
+        setLoading(false);
+        setLoadingMore(false);
       });
+  };
 
-    return () => {
-      abortController.abort();
-    };
+  useEffect(() => {
+    if (basedTitles.length === 0) return;
+    setRecsData([]);
+    setOffset(0);
+    setHasMore(true);
+    fetchData(0);
   }, [payloadStr]);
 
   const togglePlatform = (id) => setPlatforms((p) => ({ ...p, [id]: !p[id] }));
@@ -128,13 +125,7 @@ export default function Recommendations() {
   const reset = () => {
     setPriceRange(300);
     setPlatforms({ pc: true, ps5: false, xbox: false, steamdeck: false });
-    setGenres({
-      RPG: false,
-      FPS: false,
-      Horror: false,
-      Indie: false,
-      Action: false,
-    });
+    setGenres({ RPG: false, FPS: false, Horror: false, Indie: false, Action: false });
   };
 
   const recs = useMemo(() => {
@@ -147,24 +138,25 @@ export default function Recommendations() {
 
     const activePlatforms = Object.keys(platforms).filter((k) => platforms[k]);
     if (activePlatforms.length > 0) {
-      list = list.filter((g) =>
-        activePlatforms.some((p) => g.platforms.includes(p)),
-      );
+      list = list.filter((g) => activePlatforms.some((p) => g.platforms.includes(p)));
     }
 
     const activeGenres = Object.keys(genres).filter((k) => genres[k]);
     if (activeGenres.length > 0) {
       list = list.filter((g) =>
-        activeGenres.some(
-          (gg) =>
-            g.genre &&
-            g.genre.some((gn) => gn.toLowerCase().includes(gg.toLowerCase())),
-        ),
+        activeGenres.some((gg) => g.genre && g.genre.some((gn) => gn.toLowerCase().includes(gg.toLowerCase())))
       );
     }
 
     return list;
   }, [priceRange, platforms, genres, recsData]);
+
+  const handleLoadMore = () => {
+    if (loadingMore) return;
+    const nextOffset = offset + LIMIT;
+    setOffset(nextOffset);
+    fetchData(nextOffset);
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto fade-up">
@@ -174,8 +166,7 @@ export default function Recommendations() {
             Rekomendacje dla Ciebie
           </h1>
           <p className="text-[14px]" style={{ color: "var(--text-dim)" }}>
-            Wygenerowane na podstawie:{" "}
-            <span style={{ color: "var(--teal)" }}>{basedOn}</span>
+            Wygenerowane na podstawie: <span style={{ color: "var(--teal)" }}>{basedOn}</span>
           </p>
         </div>
         <button
@@ -207,10 +198,7 @@ export default function Recommendations() {
           </div>
 
           <div className="mb-7">
-            <div
-              className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3"
-              style={{ color: "var(--text-faint)" }}
-            >
+            <div className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3" style={{ color: "var(--text-faint)" }}>
               Cena (PLN)
             </div>
             <input
@@ -222,20 +210,14 @@ export default function Recommendations() {
               value={priceRange}
               onChange={(e) => setPriceRange(+e.target.value)}
             />
-            <div
-              className="flex justify-between mt-2 font-mono text-[11px]"
-              style={{ color: "var(--text-dim)" }}
-            >
+            <div className="flex justify-between mt-2 font-mono text-[11px]" style={{ color: "var(--text-dim)" }}>
               <span>0 PLN</span>
               <span style={{ color: "var(--teal)" }}>{priceRange} PLN</span>
             </div>
           </div>
 
           <div className="mb-7">
-            <div
-              className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3"
-              style={{ color: "var(--text-faint)" }}
-            >
+            <div className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3" style={{ color: "var(--text-faint)" }}>
               Platformy
             </div>
             <div className="flex flex-col gap-3">
@@ -245,27 +227,12 @@ export default function Recommendations() {
                   data-testid={`platform-${p.id}`}
                   onClick={() => togglePlatform(p.id)}
                   className="flex items-center gap-3 text-left text-[13px] transition-colors"
-                  style={{
-                    color: platforms[p.id] ? "white" : "var(--text-dim)",
-                  }}
+                  style={{ color: platforms[p.id] ? "white" : "var(--text-dim)" }}
                 >
-                  <span
-                    className={`check-box ${platforms[p.id] ? "checked" : ""}`}
-                  >
+                  <span className={`check-box ${platforms[p.id] ? "checked" : ""}`}>
                     {platforms[p.id] && (
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                      >
-                        <path
-                          d="M2 6L5 9L10 3"
-                          stroke="#04111A"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                      <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6L5 9L10 3" stroke="#04111A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </span>
@@ -276,10 +243,7 @@ export default function Recommendations() {
           </div>
 
           <div>
-            <div
-              className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3"
-              style={{ color: "var(--text-faint)" }}
-            >
+            <div className="font-mono text-[10px] uppercase tracking-[0.15em] mb-3" style={{ color: "var(--text-faint)" }}>
               Gatunki
             </div>
             <div className="flex flex-wrap gap-2">
@@ -304,63 +268,61 @@ export default function Recommendations() {
 
         <div>
           {loading ? (
-            <div
-              className="rounded-2xl border p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]"
-              style={{
-                background: "var(--panel)",
-                borderColor: "var(--border)",
-              }}
-            >
-              <div
-                className="w-10 h-10 border-4 border-t-[color:var(--teal)] rounded-full animate-spin"
-                style={{
-                  borderColor: "var(--border)",
-                  borderTopColor: "var(--teal)",
-                }}
-              ></div>
-              <div className="font-display font-bold text-[18px]">
-                Generowanie rekomendacji...
-              </div>
-              <p className="text-[14px] text-[color:var(--text-dim)]">
-                {serverStatus}
-              </p>
+            <div className="rounded-2xl border p-12 text-center flex flex-col items-center justify-center gap-4 min-h-[300px]" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+              <div className="w-10 h-10 border-4 border-t-[color:var(--teal)] rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--teal)" }}></div>
+              <div className="font-display font-bold text-[18px]">Generowanie rekomendacji...</div>
+              <p className="text-[14px] text-[color:var(--text-dim)]">{serverStatus}</p>
             </div>
           ) : recs.length === 0 ? (
-            <div
-              data-testid="empty-results"
-              className="rounded-2xl border p-12 text-center"
-              style={{
-                background: "var(--panel)",
-                borderColor: "var(--border)",
-              }}
-            >
-              <div className="font-display font-bold text-[20px] mb-2">
-                Brak wyników
-              </div>
+            <div data-testid="empty-results" className="rounded-2xl border p-12 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+              <div className="font-display font-bold text-[20px] mb-2">Brak wyników</div>
               <p className="text-[14px]" style={{ color: "var(--text-dim)" }}>
-                Spróbuj poluzować filtry lub zresetować je, aby zobaczyć
-                rekomendacje.
+                Spróbuj poluzować filtry lub wczytać więcej wyników bazowych.
               </p>
+              {hasMore && (
+                <button
+                  onClick={handleLoadMore}
+                  className="mt-6 h-11 px-6 rounded-full font-display font-bold text-[13px] transition-all"
+                  style={{ background: "var(--panel-2)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+                >
+                  Wczytaj kolejne
+                </button>
+              )}
             </div>
           ) : (
-            <div
-              data-testid="recommendations-grid"
-              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
-            >
-              {recs.map((g, i) => (
-                <div
-                  key={g.id}
-                  className="fade-up"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                >
-                  <RecGameCard
-                    game={g}
-                    match={g.match}
-                    onMore={() => navigate(`/game/${g.id}`)}
-                  />
-                </div>
-              ))}
-            </div>
+            <>
+              <div data-testid="recommendations-grid" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {recs.map((g, i) => (
+                  <div key={`${g.id}-${i}`} className="fade-up" style={{ animationDelay: `${(i % LIMIT) * 60}ms` }}>
+                    <RecGameCard game={g} match={g.match} onMore={() => navigate(`/game/${g.id}`)} />
+                  </div>
+                ))}
+
+                {hasMore && (
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:border-[color:var(--teal-dim)] w-full h-full min-h-[220px]"
+                    style={{
+                      borderColor: "var(--border-hover)",
+                      background: "transparent",
+                      color: "var(--text-dim)",
+                      opacity: loadingMore ? 0.5 : 1,
+                      cursor: loadingMore ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {loadingMore ? (
+                      <div className="w-6 h-6 border-2 border-t-[color:var(--teal)] rounded-full animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--teal)" }}></div>
+                    ) : (
+                      <Plus size={28} />
+                    )}
+                    <span className="font-mono text-[10px] uppercase tracking-wider">
+                      {loadingMore ? "Wczytywanie..." : "Wczytaj więcej z bazy"}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

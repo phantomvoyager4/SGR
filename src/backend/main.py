@@ -14,6 +14,8 @@ from typing import List, Dict
 
 class RecommenderPayload(BaseModel):
     movie_list: List[Dict[str, float]]
+    limit: int = 15
+    offset: int = 0
 
 app = FastAPI()
 
@@ -30,8 +32,8 @@ def root():
     return('SGR')
 
 @app.get('/search')
-def search(q: str = "", limit: int = 50):
-    return search_games(q, limit)
+def search(q: str = "", limit: int = 50, offset: int = 0):
+    return search_games(q, limit, offset)
 
 @app.get('/games')
 def get_games(ids: str):
@@ -54,7 +56,11 @@ def get_games_by_name(names: str):
 
 @app.post('/recommender')
 def recommend(payload: RecommenderPayload):
-    response = cs_recommender(movielist=payload.movie_list)
+    response = cs_recommender(
+        movielist=payload.movie_list, 
+        limit=payload.limit, 
+        offset=payload.offset
+    )
     return response
 
 @app.get('/game/{game_id}')

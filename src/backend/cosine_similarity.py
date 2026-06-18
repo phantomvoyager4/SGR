@@ -26,7 +26,7 @@ def _load_data_if_needed():
     _all_games_matrix_normalized = raw_matrix / norms
     del raw_matrix
 
-def cs_recommender(movielist: list):
+def cs_recommender(movielist: list, limit: int = 15, offset: int = 0):
     _load_data_if_needed()
     
     valid_vectors = []
@@ -36,7 +36,6 @@ def cs_recommender(movielist: list):
         for movie, rating in item.items():
             idx = _name_to_index.get(movie)
             if idx is not None:
-                # Apply weighted scaling based on rating
                 weight = float(rating) / 10.0
                 scaled_vector = _all_games_matrix_normalized[idx] * weight
                 valid_vectors.append(scaled_vector)
@@ -60,8 +59,16 @@ def cs_recommender(movielist: list):
         if idx is not None:
             similarities[idx] = -1.0
             
-    k = min(20, len(similarities))
-    top_indices = np.argpartition(similarities, -k)[-k:]
-    top_indices_sorted = top_indices[np.argsort(-similarities[top_indices])]
+    total_needed = offset + limit
+    if total_needed > len(similarities):
+        total_needed = len(similarities)
+        
+    if total_needed == 0 or offset >= len(similarities):
+        return []
 
-    return [{_names_cached[idx]: round(float(similarities[idx]), 2)} for idx in top_indices_sorted]
+    top_indices = np.argpartition(similarities, -total_needed)[-total_needed:]
+    top_indices_sorted = top_indices[np.argsort(-similarities[top_indices])]
+    
+    page_indices = top_indices_sorted[offset:total_needed]
+
+    return [{_names_cached[idx]: round(float(similarities[idx]), 2)} for idx in page_indices]

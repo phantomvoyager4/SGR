@@ -12,6 +12,10 @@ export default function Recommender() {
   const [library, setLibrary] = useState([]);
   const [selectedGames, setSelectedGames] = useState([]);
   const [ratings, setRatings] = useState({});
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  const LIMIT = 19;
 
   const toggle = (id) => {
     const strId = String(id);
@@ -35,19 +39,19 @@ export default function Recommender() {
   const canGenerate = selected.size >= 2 && (!isRatingMode || allRated);
 
   React.useEffect(() => {
+    setOffset(0);
+    setHasMore(true);
+    
     const delayDebounceFn = setTimeout(() => {
-      if (q.trim()) {
-        fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}`)
-          .then((res) => res.json())
-          .then((data) => setLibrary(data))
-          .catch((err) => console.error(err));
-      } else {
-        fetch(`http://localhost:8000/search?q=&limit=20`)
-          .then((res) => res.json())
-          .then((data) => setLibrary(data))
-          .catch((err) => console.error(err));
-      }
+      fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}&limit=${LIMIT}&offset=0`)
+        .then((res) => res.json())
+        .then((data) => {
+          setLibrary(data);
+          if (data.length < LIMIT) setHasMore(false);
+        })
+        .catch((err) => console.error(err));
     }, 300);
+    
     return () => clearTimeout(delayDebounceFn);
   }, [q]);
 
@@ -57,7 +61,6 @@ export default function Recommender() {
       fetch(`http://localhost:8000/games?ids=${ids}`)
         .then((res) => res.json())
         .then((data) => {
-          // Remove duplicates just in case
           const unique = [];
           const seen = new Set();
           for (const g of data) {
@@ -73,6 +76,22 @@ export default function Recommender() {
       setSelectedGames([]);
     }
   }, [selected]);
+
+  const handleLoadMore = () => {
+    const nextOffset = offset + LIMIT;
+    fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}&limit=${LIMIT}&offset=${nextOffset}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setLibrary((prev) => {
+          const existingIds = new Set(prev.map((g) => g.id));
+          const newItems = data.filter((g) => !existingIds.has(g.id));
+          return [...prev, ...newItems];
+        });
+        setOffset(nextOffset);
+        if (data.length < LIMIT) setHasMore(false);
+      })
+      .catch((err) => console.error(err));
+  };
 
   const handleGenerate = () => {
     if (!canGenerate) return;
@@ -101,7 +120,6 @@ export default function Recommender() {
         odpowiednie informacje.
       </p>
 
-      {/* Stats banner */}
       <div
         data-testid="selection-banner"
         className="rounded-2xl border p-6 flex items-center justify-between flex-wrap gap-6 mb-8"
@@ -151,7 +169,6 @@ export default function Recommender() {
           >
             <HelpCircle className="font-display text-center text-red-400 max-w-[100px] text-sm cursor-pointer" />
 
-            {/* Tooltip */}
             <div className="absolute bottom-full mb-2 hidden w-64 rounded bg-gray-900 p-2 text-xs text-white group-hover:block z-10 shadow-lg font-sans text-left">
               Zaznacz minimum 2 gry i do wszystkich dodaj oceny, aby wygenerować
               rekomendacje.
@@ -176,7 +193,6 @@ export default function Recommender() {
         </div>
       </div>
 
-      {/* Selected row */}
       {selectedGames.length > 0 && (
         <div className="mb-10">
           <div
@@ -244,7 +260,6 @@ export default function Recommender() {
         </div>
       )}
 
-      {/* Search */}
       <div className="mb-6">
         <div
           className="flex items-center gap-3 h-12 px-5 rounded-full border max-w-[520px]"
@@ -261,7 +276,6 @@ export default function Recommender() {
         </div>
       </div>
 
-      {/* Library grid */}
       <div
         data-testid="library-grid"
         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5"
@@ -270,7 +284,7 @@ export default function Recommender() {
           <div
             key={g.id}
             className="fade-up"
-            style={{ animationDelay: `${i * 40}ms` }}
+            style={{ animationDelay: `${(i % LIMIT) * 40}ms` }}
           >
             <SelectableLibraryCard
               game={g}
@@ -279,21 +293,24 @@ export default function Recommender() {
             />
           </div>
         ))}
-        <button
-          data-testid="load-more-btn"
-          className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:border-[color:var(--teal-dim)] w-full"
-          style={{
-            borderColor: "var(--border-hover)",
-            background: "transparent",
-            color: "var(--text-dim)",
-            minHeight: "180px",
-          }}
-        >
-          <Plus size={28} />
-          <span className="font-mono text-[10px] uppercase tracking-wider">
-            Wczytaj więcej
-          </span>
-        </button>
+        {hasMore && (
+          <button
+            data-testid="load-more-btn"
+            onClick={handleLoadMore}
+            className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:border-[color:var(--teal-dim)] w-full"
+            style={{
+              borderColor: "var(--border-hover)",
+              background: "transparent",
+              color: "var(--text-dim)",
+              minHeight: "180px",
+            }}
+          >
+            <Plus size={28} />
+            <span className="font-mono text-[10px] uppercase tracking-wider">
+              Wczytaj więcej
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

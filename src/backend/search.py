@@ -112,21 +112,24 @@ def load_data():
             g.setdefault('discount', 0)
             g.setdefault('currency', 'PLN')
 
-def search_games(query: str, limit=50):
+def search_games(query: str, limit=50, offset=0):
     if not is_loaded:
         load_data()
     
     if not query:
-        return game_index[:limit]
+        return game_index[offset : offset + limit]
 
     q = query.lower()
     expanded_q = ACRONYMS.get(q, q)
     
     results = []
+    count = 0
     for g in game_index:
         title_lower = g["title"].lower()
         if q in title_lower or expanded_q in title_lower:
-            results.append(g)
+            if count >= offset:
+                results.append(g)
+            count += 1
             if len(results) >= limit:
                 break
     return results
