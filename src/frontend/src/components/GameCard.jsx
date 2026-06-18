@@ -104,6 +104,7 @@ export function FavoriteCard({ game }) {
 export function RecGameCard({ game, match = 95, onMore }) {
   const finalPrice = game.discount > 0 ? (game.price * (1 - game.discount / 100)).toFixed(2) : game.price.toFixed(2);
   const currency = game.currency || 'PLN';
+
   return (
     <div
       data-testid={`rec-game-${game.id}`}
@@ -136,6 +137,15 @@ export function RecGameCard({ game, match = 95, onMore }) {
           <div className="text-right">
             <div className="font-display font-bold text-[18px]" style={{ color: "var(--purple-2)" }}>
               {finalPrice} {currency}
+              {game.originalCurrency && (
+                <span 
+                  className="ml-1 cursor-help text-[14px]" 
+                  style={{ color: "var(--text-faint)" }}
+                  title={`Przybliżona kwota przewalutowania z: ${game.originalCurrency}`}
+                >
+                  *
+                </span>
+              )}
             </div>
             {game.discount > 0 && (
               <div className="font-mono text-[10px]" style={{ color: "var(--teal)" }}>-{game.discount}%</div>

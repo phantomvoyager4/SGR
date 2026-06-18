@@ -58,13 +58,20 @@ export default function Recommendations() {
 
     const postPayload = parsedPairs.map((p) => ({ [p.title]: p.rating }));
 
-    fetch(`http://localhost:8000/recommender`, {
+    const reqRecommender = fetch(`http://localhost:8000/recommender`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ movie_list: postPayload, limit: LIMIT, offset: currentOffset }),
-    })
+    }).then((res) => res.json());
+
+    const reqRates = fetch("https://open.er-api.com/v6/latest/PLN")
       .then((res) => res.json())
-      .then((data) => {
+      .catch(() => ({ rates: { PLN: 1, EUR: 0.23, USD: 0.25, GBP: 0.20 } }));
+
+    Promise.all([reqRecommender, reqRates])
+      .then(([data, ratesData]) => {
+        const rates = ratesData.rates || { PLN: 1 };
+
         if (data.length < LIMIT) setHasMore(false);
         if (data.length === 0) {
           setLoading(false);
@@ -84,16 +91,28 @@ export default function Recommendations() {
           .then((details) => {
             const merged = formatted.map((rec) => {
               const detail = details.find((d) => d.title === rec.name);
+              
+              let rawPrice = detail && (typeof detail.price !== 'undefined') ? detail.price : 0;
+              let rawCurrency = detail && detail.currency ? detail.currency : 'PLN';
+              let originalCurrency = null;
+
+              if (rawCurrency !== 'PLN' && rates[rawCurrency]) {
+                rawPrice = rawPrice / rates[rawCurrency];
+                originalCurrency = rawCurrency;
+                rawCurrency = 'PLN';
+              }
+
               return {
                 id: detail ? detail.id : rec.name,
                 title: rec.name,
                 match: rec.match,
                 cover: detail ? detail.cover : "",
                 tag: detail && detail.genre && detail.genre.length > 0 ? detail.genre[0] : "INNE",
-                price: detail && (typeof detail.price !== 'undefined') ? detail.price : 0,
+                price: rawPrice,
                 discount: detail && (typeof detail.discount !== 'undefined') ? detail.discount : 0,
-                currency: detail && detail.currency ? detail.currency : 'PLN',
-                rating: detail && (typeof detail.rating !== 'undefined') ? detail.rating : NaN,
+                currency: rawCurrency,
+                originalCurrency: originalCurrency,
+                rating: detail && (typeof detail.rating !== 'undefined') ? detail.rating : 8.5,
                 platforms: detail && detail.platforms ? detail.platforms : ["pc"],
                 genre: detail ? detail.genre : [],
               };
