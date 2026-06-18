@@ -131,17 +131,32 @@ def search_games(query: str, limit=50):
                 break
     return results
 
-def get_game_details(game_id: str):
-    if not is_loaded:
-        load_data()
+def get_game_details(game_id: int):
+    target_id = str(game_id)
+    prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_informations')
     
-    for game in game_index:
-        if str(game.get('id') or game.get('appid') or '') == game_id:
-            return game
+    if not os.path.isdir(prices_dir):
+        return {}
     
+    for fname in os.listdir(prices_dir):
+        if not fname.startswith('games_chunk_') or not fname.endswith('.jsonl'):
+            continue
+        
+        fpath = os.path.join(prices_dir, fname)
+        try:
+            with open(fpath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    obj = json.loads(line)
+                    if target_id in obj:
+                        return obj[target_id]
+        except Exception:
+            continue
+            
     return {}
-
-def get_price_history(game_id: str):
+def get_price_history(game_id: int):
     history = []
     prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_prices')
     

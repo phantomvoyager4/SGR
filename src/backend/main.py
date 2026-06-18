@@ -58,12 +58,12 @@ def recommend(payload: RecommenderPayload):
     return response
 
 @app.get('/game/{game_id}')
-def get_game(game_id: str):
+def get_game(game_id: int):
     load_data()
     return get_game_details(game_id)
 
 @app.get('/game/{game_id}/price-history')
-def get_game_price_history(game_id: str):
+def get_game_price_history(game_id: int):
     return get_price_history(game_id)
 
 @app.get('/game/{game_id}/price-predictions')

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { GAMES } from "../data/games";
 
 export default function GameDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const game = GAMES.find((g) => g.id === id);
   const [details, setDetails] = useState(null);
   const [priceHistory, setPriceHistory] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,35 +13,50 @@ export default function GameDetails() {
       try {
         const detailsRes = await fetch(`http://localhost:8000/game/${id}`);
         const detailsData = await detailsRes.json();
-        setDetails(detailsData);
+        // Sprawdzenie czy obiekt nie jest pusty
+        setDetails(Object.keys(detailsData).length > 0 ? detailsData : null);
 
         const priceRes = await fetch(`http://localhost:8000/game/${id}/price-history`);
         const priceData = await priceRes.json();
         setPriceHistory(priceData);
       } catch (err) {
-        console.error("Failed to fetch game details:", err);
+        console.error("Błąd pobierania danych:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (game) {
-      fetchData();
-    }
-  }, [id, game]);
+    fetchData();
+  }, [id]);
 
-  if (!game) {
+  if (loading) {
+    return (
+      <div className="max-w-[1100px] mx-auto text-center p-12 text-[color:var(--text-dim)]">
+        Ładowanie szczegółów gry...
+      </div>
+    );
+  }
+
+  if (!details) {
     return (
       <div className="max-w-[900px] mx-auto">
         <button onClick={() => navigate(-1)} className="mb-4">← Powrót</button>
         <div className="rounded-2xl border p-8" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
-          Gra nie znaleziona.
+          Gra nie znaleziona na serwerze.
         </div>
       </div>
     );
   }
 
-  const finalPrice = game.discount > 0 ? (game.price * (1 - game.discount / 100)).toFixed(2) : game.price.toFixed(2);
+  const isFree = details.is_free;
+  const priceOverview = details.price_overview;
+  const discount = priceOverview?.discount_percent || 0;
+  const currentPrice = isFree ? 0 : (priceOverview ? priceOverview.final / 100 : null);
+  const initialPrice = priceOverview ? priceOverview.initial / 100 : null;
+
+  const genres = details.genres ? details.genres.map((g) => g.description).join(", ") : "Brak danych";
+  const studio = details.developers ? details.developers.join(", ") : "Nieznany";
+  const categories = details.categories ? details.categories.map((c) => c.description) : [];
 
   return (
     <div className="max-w-[1100px] mx-auto fade-up">
@@ -51,38 +64,37 @@ export default function GameDetails() {
 
       <div className="rounded-2xl overflow-hidden border" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
         <div className="relative w-full" style={{ aspectRatio: "3/1" }}>
-          <img src={game.hero || game.cover} alt={game.title} className="w-full h-full object-cover" onError={(e)=>{e.target.src=game.cover}} />
+          <img src={details.header_image} alt={details.name} className="w-full h-full object-cover blur-sm opacity-50 absolute top-0 left-0" />
+          <img src={details.header_image} alt={details.name} className="h-full w-auto mx-auto relative z-10 object-contain" />
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
             <div className="flex items-start gap-6">
-              <img src={game.cover} alt={game.title} className="w-40 h-60 object-cover rounded-lg shadow" />
-              <div>
-                <h1 className="font-display font-black text-[34px] mb-2">{game.title}</h1>
+              <div className="w-full">
+                <h1 className="font-display font-black text-[34px] mb-2">{details.name}</h1>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="font-mono text-[13px]" style={{ color: "#FDE047" }}>★ {game.rating.toFixed(1)}</div>
-                  <div className="text-[13px]" style={{ color: "var(--text-faint)" }}>{game.genre.join(", ")} • {game.studio}</div>
-                </div>
-
-                <div className="mb-4 text-[14px]" style={{ color: "var(--text-dim)" }}>
-                  Czas gry: {game.hours}h • Ostatnio: {game.recent}
+                  <div className="text-[13px]" style={{ color: "var(--text-faint)" }}>
+                    {genres} • {studio}
+                  </div>
                 </div>
 
                 <div className="mb-4">
-                  <div className="text-[13px] mb-2 font-mono" style={{ color: "var(--text-faint)" }}>Platformy</div>
-                  <div className="flex gap-2 text-[13px]" style={{ color: "var(--text-dim)" }}>
-                    {game.platforms.map((p) => (
-                      <div key={p} className="px-3 py-1 rounded-full border" style={{ borderColor: "var(--border)" }}>{p}</div>
+                  <div className="text-[13px] mb-2 font-mono" style={{ color: "var(--text-faint)" }}>Cechy / Kategorie</div>
+                  <div className="flex gap-2 text-[12px] flex-wrap" style={{ color: "var(--text-dim)" }}>
+                    {categories.map((c) => (
+                      <div key={c} className="px-3 py-1 rounded-full border" style={{ borderColor: "var(--border)" }}>{c}</div>
                     ))}
                   </div>
                 </div>
 
                 <div className="mb-6">
                   <div className="font-mono text-[12px]" style={{ color: "var(--text-faint)" }}>Opis</div>
-                  <p className="mt-2 text-[14px]" style={{ color: "var(--text-dim)" }}>
-                    {loading ? "Ładowanie..." : details?.about_the_game || "Brak dostępnego opisu gry."}
-                  </p>
+                  <div 
+                    className="mt-2 text-[14px] leading-relaxed" 
+                    style={{ color: "var(--text-dim)" }}
+                    dangerouslySetInnerHTML={{ __html: details.about_the_game }}
+                  />
                 </div>
               </div>
             </div>
@@ -90,18 +102,23 @@ export default function GameDetails() {
 
           <aside className="md:col-span-1 p-4 border-l" style={{ borderColor: "var(--border)" }}>
             <div className="mb-4">
-              {game.discount > 0 && (
-                <div className="font-mono text-[12px] line-through" style={{ color: "var(--text-faint)" }}>{game.price.toFixed(2)} zł</div>
+              {discount > 0 && (
+                <div className="font-mono text-[12px] line-through" style={{ color: "var(--text-faint)" }}>
+                  {initialPrice?.toFixed(2)} zł
+                </div>
               )}
-              <div className="font-display font-bold text-[24px]" style={{ color: "var(--purple-2)" }}>{finalPrice} zł</div>
-              {game.discount > 0 && <div className="font-mono text-[12px]" style={{ color: "var(--teal)" }}>-{game.discount}%</div>}
+              <div className="font-display font-bold text-[24px]" style={{ color: "var(--purple-2)" }}>
+                {isFree ? "Za darmo" : currentPrice !== null ? `${currentPrice.toFixed(2)} zł` : "Brak ceny"}
+              </div>
+              {discount > 0 && <div className="font-mono text-[12px]" style={{ color: "var(--teal)" }}>-{discount}%</div>}
             </div>
 
-            <button className="w-full h-12 rounded-full font-bold" style={{ background: "var(--teal)", color: "#04111A" }}>Kup teraz</button>
+            <button className="w-full h-12 rounded-full font-bold" style={{ background: "var(--teal)", color: "#04111A" }}>
+              Zagraj / Kup
+            </button>
 
             <div className="mt-6 text-[13px]" style={{ color: "var(--text-faint)" }}>
-              <div>Tag: {game.tag}</div>
-              <div className="mt-2">Studio: {game.studio}</div>
+              <div>Wydawca: {details.publishers ? details.publishers.join(", ") : "Nieznany"}</div>
             </div>
           </aside>
         </div>
