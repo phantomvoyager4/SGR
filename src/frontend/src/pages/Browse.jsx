@@ -93,11 +93,11 @@ export default function Browse() {
         >
           {filtered.map((g, i) => (
             <div
-              key={g.id}
+              key={`${g.id}-${i}`}
               className="fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
-              <GameCard game={g} onClick={() => navigate(`/game/${g.id}`)} />
+              <GameCard game={g} match={g.match} onClick={() => navigate(`/game/${g.id}`)} />
             </div>
           ))}
         </div>

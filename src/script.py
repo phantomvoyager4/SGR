@@ -17,7 +17,7 @@ def script():
     if npm_path:
         subprocess.Popen([npm_path, 'run', 'start'], cwd=front_dir)
 
-    time.sleep(1)
+    time.sleep(5)
     webbrowser.open("http://localhost:3000/")
 
 if __name__ == "__main__":

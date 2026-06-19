@@ -159,6 +159,7 @@ def get_game_details(game_id: int):
             continue
             
     return {}
+
 def get_price_history(game_id: int):
     history = []
     prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_prices')
