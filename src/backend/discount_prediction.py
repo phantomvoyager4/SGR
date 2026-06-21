@@ -20,7 +20,7 @@ def get_price_predictions(game_id, days_ahead: int = 90):
     prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_prices')
     
     if not os.path.isdir(prices_dir):
-        print(f"BŁĄD: Folder {prices_dir} nie istnieje!")
+        print(f"Brak pliku {prices_dir}")
         return {}
     
     for fname in sorted(os.listdir(prices_dir)):
@@ -47,10 +47,8 @@ def get_price_predictions(game_id, days_ahead: int = 90):
             continue
     
     if not history:
-        print(f"UWAGA: Nie znaleziono żadnych danych o cenach dla gry {game_id} w plikach JSONL.")
+        print(f"Brak danych dla {game_id}")
         return {}
-        
-    print(f"Znalazłem {len(history)} surowych wpisów dat/cen dla gry {game_id}.")
     
     try:
         df = pd.DataFrame(history)
@@ -63,8 +61,8 @@ def get_price_predictions(game_id, days_ahead: int = 90):
         df.reset_index(inplace=True)
         df = df.dropna()
         
-        if len(df) < 10:
-            return {}
+        # if len(df) < 10:
+        #     return {}
         
         df['y'] = df['y'] / 100.0
         original_price = df['y'].max()
