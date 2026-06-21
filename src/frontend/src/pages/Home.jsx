@@ -10,21 +10,21 @@ export default function Home() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("RPG");
 
-  const hero = GAMES.find((g) => g.id === "cyberpunk");
+  const hero = GAMES.find((g) => g.id === "1091500");
 
   const recommended = useMemo(() => {
     const map = {
-      RPG: ["elden-ring", "dark-souls-3", "baldurs-gate-3", "bloodborne"],
-      FPS: ["doom-eternal", "call-of-juarez", "cyberpunk", "baldurs-gate-3"],
-      Indie: ["hades", "hollow-knight", "lies-of-p", "elden-ring"],
+      RPG: ["1245620", "374320", "1086940", "3611400"],
+      FPS: ["782330", "3020", "1091500", "1086940"],
+      Indie: ["1145360", "367520", "1627720", "1245620"],
     };
     const ids = map[filter] || map.RPG;
     return ids.map((id) => GAMES.find((g) => g.id === id)).filter(Boolean);
   }, [filter]);
 
   const activityBased = [
-    GAMES.find((g) => g.id === "rdr"),
-    GAMES.find((g) => g.id === "call-of-juarez"),
+    GAMES.find((g) => g.id === "2668510"),
+    GAMES.find((g) => g.id === "3020"),
   ];
 
   return (
