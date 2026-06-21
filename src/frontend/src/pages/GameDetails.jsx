@@ -148,7 +148,7 @@ export default function GameDetails() {
           {predictions ? (
             <div>
               <div className="mb-4 text-center text-[14px]" style={{ color: "var(--text-faint)" }}>
-                Sugerowana cena bazowa wykryta przez model: <span className="font-bold" style={{ color: "var(--text-bright)" }}>{predictions.current_price.toFixed(2)} zł</span>
+                Cena bazowa: <span className="font-bold" style={{ color: "var(--text-bright)" }}>{predictions.current_price.toFixed(2)} zł</span>
               </div>
               
               <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border)" }}>

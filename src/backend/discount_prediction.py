@@ -54,9 +54,8 @@ def get_price_predictions(game_id, days_ahead: int = 90):
     
     try:
         df = pd.DataFrame(history)
-
+        
         df['ds'] = pd.to_datetime(df['ds'], utc=True).dt.tz_convert(None).dt.normalize()
-
         df = df.drop_duplicates(subset=['ds'], keep='last').sort_values('ds')
         
         df.set_index('ds', inplace=True)
@@ -64,39 +63,30 @@ def get_price_predictions(game_id, days_ahead: int = 90):
         df.reset_index(inplace=True)
         df = df.dropna()
         
-        print(f"Po wypełnieniu brakujących dni, tabela ma {len(df)} wierszy.")
-
-        if len(df) < 5:
-            print(f"Odrzucono: Gra {game_id} ma zaledwie {len(df)} dni historii (wymagane 5).")
+        if len(df) < 10:
             return {}
         
+        df['y'] = df['y'] / 100.0
         original_price = df['y'].max()
-
-        df['y'] = df['y']/100
         
-        original_price = df['y'].max()/100
+        sales_df = df[df['y'] < original_price - 0.5]
+        typical_sale_price = sales_df['y'].median() if not sales_df.empty else original_price
         
         df['month'] = df['ds'].dt.month
         df['day_of_week'] = df['ds'].dt.dayofweek
         df['day_of_month'] = df['ds'].dt.day
+        df['day_of_year'] = df['ds'].dt.dayofyear 
         df['quarter'] = df['ds'].dt.quarter
         df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
         
         df['sin_month'] = np.sin(2 * np.pi * df['month'] / 12)
         df['cos_month'] = np.cos(2 * np.pi * df['month'] / 12)
         
-        is_sale = (df['y'] < original_price).astype(int)
-        df['days_since_last_sale'] = is_sale.groupby((is_sale != is_sale.shift()).cumsum()).cumcount()
-        df['days_since_last_sale'] = df['days_since_last_sale'].shift(1).fillna(0)
-        
-        feature_cols = ['month', 'day_of_week', 'day_of_month', 'quarter', 'is_weekend', 'sin_month', 'cos_month']
+        feature_cols = ['month', 'day_of_week', 'day_of_month', 'day_of_year', 'quarter', 'is_weekend', 'sin_month', 'cos_month']
         X = df[feature_cols]
         y = df['y']
         
-        if len(X) < 5:
-            return {}
-        
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=False)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
         
         train_dataset = lgb.Dataset(X_train, label=y_train)
         test_dataset = lgb.Dataset(X_test, label=y_test, reference=train_dataset)
@@ -105,9 +95,9 @@ def get_price_predictions(game_id, days_ahead: int = 90):
             'objective': 'regression',
             'metric': 'mae',
             'boosting_type': 'gbdt',
-            'learning_rate': 0.05,  
-            'num_leaves': 7,   
-            'min_data_in_leaf': 2,
+            'learning_rate': 0.06,
+            'num_leaves': 35,
+            'min_data_in_leaf': 3,
             'feature_fraction': 1.0,
             'verbose': -1
         }
@@ -115,12 +105,13 @@ def get_price_predictions(game_id, days_ahead: int = 90):
         model = lgb.train(
             params,
             train_dataset,
-            num_boost_round=100,
+            num_boost_round=200,
             valid_sets=[test_dataset],
-            callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)]
+            callbacks=[lgb.early_stopping(stopping_rounds=20, verbose=False)]
         )
         
-        future_dates = pd.date_range(start=df['ds'].max() + pd.Timedelta(days=1), periods=days_ahead, freq='D')
+        start_date = pd.Timestamp.now().normalize()
+        future_dates = pd.date_range(start=start_date, periods=days_ahead, freq='D')
         
         future_rows = []
         for dt in future_dates:
@@ -128,6 +119,7 @@ def get_price_predictions(game_id, days_ahead: int = 90):
                 'month': dt.month,
                 'day_of_week': dt.dayofweek,
                 'day_of_month': dt.day,
+                'day_of_year': dt.dayofyear, 
                 'quarter': dt.quarter,
                 'is_weekend': 1 if dt.dayofweek in [5, 6] else 0,
                 'sin_month': np.sin(2 * np.pi * dt.month / 12),
@@ -138,14 +130,21 @@ def get_price_predictions(game_id, days_ahead: int = 90):
         X_future = pd.DataFrame(future_rows)
         future_preds = model.predict(X_future)
         
-        future_preds = np.where(future_preds > original_price - 0.5, original_price, future_preds)
-        future_preds = np.where(((original_price - future_preds) / original_price) * 100 < 5, original_price, future_preds)
+        threshold = original_price #* 0.99
         
-        discount = ((original_price - future_preds) / original_price) * 100
+        final_preds = []
+        for p in future_preds:
+            if p < threshold:
+                final_preds.append(typical_sale_price)
+            else:
+                final_preds.append(original_price)
+                
+        final_preds = np.array(final_preds)
+        discount = ((original_price - final_preds) / original_price) * 100
         
         return {
             "dates": future_dates.strftime('%Y-%m-%d').tolist(),
-            "prices": np.round(future_preds, 2).tolist(),
+            "prices": np.round(final_preds, 2).tolist(),
             "discounts": np.round(discount, 0).astype(int).tolist(),
             "current_price": round(float(original_price), 2),
             "historical_dates": df['ds'].dt.strftime('%Y-%m-%d').tolist(),
