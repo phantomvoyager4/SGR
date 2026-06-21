@@ -13,7 +13,6 @@ export default function GameDetails() {
       try {
         const detailsRes = await fetch(`http://localhost:8000/game/${id}`);
         const detailsData = await detailsRes.json();
-        // Sprawdzenie czy obiekt nie jest pusty
         setDetails(Object.keys(detailsData).length > 0 ? detailsData : null);
 
         const priceRes = await fetch(`http://localhost:8000/game/${id}/price-history`);
@@ -41,7 +40,7 @@ export default function GameDetails() {
     return (
       <div className="max-w-[900px] mx-auto">
         <button onClick={() => navigate(-1)} className="mb-4">← Powrót</button>
-        <div className="rounded-2xl border p-8" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+        <div className="rounded-2xl border p-8 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
           Gra nie znaleziona na serwerze.
         </div>
       </div>
@@ -63,44 +62,35 @@ export default function GameDetails() {
       <button onClick={() => navigate(-1)} className="mb-6">← Powrót</button>
 
       <div className="rounded-2xl overflow-hidden border" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
-        <div className="relative w-full" style={{ aspectRatio: "3/1" }}>
+        <div className="relative w-full flex justify-center items-center overflow-hidden" style={{ aspectRatio: "3/1" }}>
           <img src={details.header_image} alt={details.name} className="w-full h-full object-cover blur-sm opacity-50 absolute top-0 left-0" />
-          <img src={details.header_image} alt={details.name} className="h-full w-auto mx-auto relative z-10 object-contain" />
+          <img src={details.header_image} alt={details.name} className="h-full w-auto relative z-10 object-contain mx-auto" />
         </div>
 
         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <div className="flex items-start gap-6">
-              <div className="w-full">
+          <div className="md:col-span-2 flex flex-col justify-center">
+            <div className="flex items-start gap-6 w-full">
+              <div className="w-full text-center md:text-left">
                 <h1 className="font-display font-black text-[34px] mb-2">{details.name}</h1>
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
                   <div className="text-[13px]" style={{ color: "var(--text-faint)" }}>
                     {genres} • {studio}
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <div className="text-[13px] mb-2 font-mono" style={{ color: "var(--text-faint)" }}>Cechy / Kategorie</div>
-                  <div className="flex gap-2 text-[12px] flex-wrap" style={{ color: "var(--text-dim)" }}>
+                <div>
+                  <div className="text-[13px] mb-2 font-mono uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>Cechy / Kategorie</div>
+                  <div className="flex gap-2 text-[12px] flex-wrap justify-center md:justify-start" style={{ color: "var(--text-dim)" }}>
                     {categories.map((c) => (
                       <div key={c} className="px-3 py-1 rounded-full border" style={{ borderColor: "var(--border)" }}>{c}</div>
                     ))}
                   </div>
                 </div>
-
-                <div className="mb-6">
-                  <div className="font-mono text-[12px]" style={{ color: "var(--text-faint)" }}>Opis</div>
-                  <div 
-                    className="mt-2 text-[14px] leading-relaxed" 
-                    style={{ color: "var(--text-dim)" }}
-                    dangerouslySetInnerHTML={{ __html: details.about_the_game }}
-                  />
-                </div>
               </div>
             </div>
           </div>
 
-          <aside className="md:col-span-1 p-4 border-l" style={{ borderColor: "var(--border)" }}>
+          <aside className="md:col-span-1 p-4 border-t md:border-t-0 md:border-l flex flex-col justify-center text-center md:text-left" style={{ borderColor: "var(--border)" }}>
             <div className="mb-4">
               {discount > 0 && (
                 <div className="font-mono text-[12px] line-through" style={{ color: "var(--text-faint)" }}>
@@ -113,20 +103,36 @@ export default function GameDetails() {
               {discount > 0 && <div className="font-mono text-[12px]" style={{ color: "var(--teal)" }}>-{discount}%</div>}
             </div>
 
-            <button className="w-full h-12 rounded-full font-bold" style={{ background: "var(--teal)", color: "#04111A" }}>
+            <button className="w-full h-12 rounded-full font-bold transition-transform hover:scale-[1.02]" style={{ background: "var(--teal)", color: "#04111A" }}>
               Zagraj / Kup
             </button>
 
-            <div className="mt-6 text-[13px]" style={{ color: "var(--text-faint)" }}>
+            <div className="mt-4 text-[13px]" style={{ color: "var(--text-faint)" }}>
               <div>Wydawca: {details.publishers ? details.publishers.join(", ") : "Nieznany"}</div>
             </div>
           </aside>
         </div>
       </div>
 
+      <div className="mt-8 rounded-2xl overflow-hidden border p-8 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+        <div className="mb-6">
+
+          <h2 className="font-display font-black text-[28px] mt-3" style={{ color: "var(--text-bright)" }}>
+            Opis gry
+          </h2>
+          <div className="w-12 h-[2px] mx-auto mt-2 rounded-full" style={{ background: "var(--teal)" }}></div>
+        </div>
+
+        <div 
+          className="mt-2 text-[15px] leading-relaxed max-w-[800px] mx-auto flex flex-col items-center justify-center [&_img]:mx-auto [&_img]:my-4 [&_img]:rounded-lg" 
+          style={{ color: "var(--text-dim)" }}
+          dangerouslySetInnerHTML={{ __html: details.about_the_game }}
+        />
+      </div>
+
       {priceHistory && priceHistory.dates.length > 0 && (
         <div className="mt-8 rounded-2xl overflow-hidden border p-6" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
-          <h2 className="font-display font-bold text-[24px] mb-6">Historia cen</h2>
+          <h2 className="font-display font-bold text-[24px] mb-6 text-center md:text-left">Historia cen</h2>
           <div className="w-full h-80 bg-gradient-to-b from-[rgba(139,92,246,0.1)] to-transparent rounded-lg p-4 flex items-end justify-start gap-1 overflow-x-auto">
             {priceHistory.prices.map((price, idx) => {
               const minPrice = Math.min(...priceHistory.prices);
