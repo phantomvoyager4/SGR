@@ -6,6 +6,7 @@ export default function GameDetails() {
   const navigate = useNavigate();
   const [details, setDetails] = useState(null);
   const [priceHistory, setPriceHistory] = useState(null);
+  const [predictions, setPredictions] = useState(null); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,6 +19,12 @@ export default function GameDetails() {
         const priceRes = await fetch(`http://localhost:8000/game/${id}/price-history`);
         const priceData = await priceRes.json();
         setPriceHistory(priceData);
+
+        const predictionsRes = await fetch(`http://localhost:8000/game/${id}/price-predictions?days=30`);
+        if (predictionsRes.ok) {
+          const predictionsData = await predictionsRes.json();
+          setPredictions(Object.keys(predictionsData).length > 0 ? predictionsData : null);
+        }
       } catch (err) {
         console.error("Błąd pobierania danych:", err);
       } finally {
@@ -116,7 +123,6 @@ export default function GameDetails() {
 
       <div className="mt-8 rounded-2xl overflow-hidden border p-8 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
         <div className="mb-6">
-
           <h2 className="font-display font-black text-[28px] mt-3" style={{ color: "var(--text-bright)" }}>
             Opis gry
           </h2>
@@ -130,22 +136,58 @@ export default function GameDetails() {
         />
       </div>
 
-      <div className="mt-8 rounded-2xl overflow-hidden border p-8 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
-        <div className="mb-6">
-
+      <div className="mt-8 rounded-2xl overflow-hidden border p-8" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+        <div className="mb-6 text-center">
           <h2 className="font-display font-black text-[28px] mt-3" style={{ color: "var(--text-bright)" }}>
             Nasze przewidywania ceny
           </h2>
           <div className="w-12 h-[2px] mx-auto mt-2 rounded-full" style={{ background: "var(--teal)" }}></div>
         </div>
 
-        <div 
-          className="mt-2 text-[15px] leading-relaxed max-w-[800px] mx-auto flex flex-col items-center justify-center [&_img]:mx-auto [&_img]:my-4 [&_img]:rounded-lg" 
-          style={{ color: "var(--text-dim)" }}
-          dangerouslySetInnerHTML={{ __html: details.about_the_game }}
-        />
+        <div className="max-w-[800px] mx-auto mt-6 text-[15px]" style={{ color: "var(--text-dim)" }}>
+          {predictions ? (
+            <div>
+              <div className="mb-4 text-center text-[14px]" style={{ color: "var(--text-faint)" }}>
+                Sugerowana cena bazowa wykryta przez model: <span className="font-bold" style={{ color: "var(--text-bright)" }}>{predictions.current_price.toFixed(2)} zł</span>
+              </div>
+              
+              <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border)" }}>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <th className="p-3 font-mono text-[13px] uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>Data</th>
+                      <th className="p-3 font-mono text-[13px] uppercase tracking-wider" style={{ color: "var(--text-faint)" }}>Przewidywana Cena</th>
+                      <th className="p-3 font-mono text-[13px] uppercase tracking-wider text-right" style={{ color: "var(--text-faint)" }}>Spodziewana obniżka</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {predictions.dates.map((date, index) => {
+                      const price = predictions.prices[index];
+                      const discountPercent = predictions.discounts[index];
+                      
+                      return (
+                        <tr key={date} className="border-t transition-colors hover:bg-[rgba(255,255,255,0.01)]" style={{ borderColor: "var(--border)" }}>
+                          <td className="p-3 font-mono text-[14px]">{date}</td>
+                          <td className="p-3 font-bold" style={{ color: discountPercent > 0 ? "var(--purple-2)" : "var(--text-bright)" }}>
+                            {price.toFixed(2)} zł
+                          </td>
+                          <td className="p-3 text-right font-mono font-bold" style={{ color: discountPercent > 0 ? "var(--teal)" : "var(--text-faint)" }}>
+                            {discountPercent > 0 ? `-${discountPercent}%` : "Brak obniżki"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center p-6 text-[color:var(--text-faint)]">
+              Niestety nasz model nie posiada wystarczającej ilości danych, aby wygenerować prognozę ceny dla tej gry.
+            </div>
+          )}
+        </div>
       </div>
-
       
     </div>
   );

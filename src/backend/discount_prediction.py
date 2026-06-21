@@ -10,24 +10,17 @@ try:
 except ImportError:
     DEPS_AVAILABLE = False
 
-def get_price_predictions(game_id: str, days_ahead: int = 90):
-    """
-    Get discount predictions for a game by analyzing historical price data.
-    
-    Args:
-        game_id: Steam game ID as string
-        days_ahead: Number of days to predict (default 90)
-    
-    Returns:
-        dict with keys: dates, prices, discounts, current_price, or empty dict if no data
-    """
+def get_price_predictions(game_id, days_ahead: int = 90):
     if not DEPS_AVAILABLE:
         return {}
+
+    game_id = str(game_id)
     
     history = []
     prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_prices')
     
     if not os.path.isdir(prices_dir):
+        print(f"BŁĄD: Folder {prices_dir} nie istnieje!")
         return {}
     
     for fname in sorted(os.listdir(prices_dir)):
@@ -54,24 +47,34 @@ def get_price_predictions(game_id: str, days_ahead: int = 90):
             continue
     
     if not history:
+        print(f"UWAGA: Nie znaleziono żadnych danych o cenach dla gry {game_id} w plikach JSONL.")
         return {}
+        
+    print(f"Znalazłem {len(history)} surowych wpisów dat/cen dla gry {game_id}.")
     
     try:
         df = pd.DataFrame(history)
-        df['ds'] = pd.to_datetime(df['ds'])
-        df = df.drop_duplicates(subset=['ds']).sort_values('ds')
+
+        df['ds'] = pd.to_datetime(df['ds'], utc=True).dt.tz_convert(None).dt.normalize()
+
+        df = df.drop_duplicates(subset=['ds'], keep='last').sort_values('ds')
         
         df.set_index('ds', inplace=True)
         df = df.resample('D').ffill()
         df.reset_index(inplace=True)
-        
         df = df.dropna()
-        df = df.sort_values('ds')
         
-        if len(df) < 10:
+        print(f"Po wypełnieniu brakujących dni, tabela ma {len(df)} wierszy.")
+
+        if len(df) < 5:
+            print(f"Odrzucono: Gra {game_id} ma zaledwie {len(df)} dni historii (wymagane 5).")
             return {}
         
         original_price = df['y'].max()
+
+        df['y'] = df['y']/100
+        
+        original_price = df['y'].max()/100
         
         df['month'] = df['ds'].dt.month
         df['day_of_week'] = df['ds'].dt.dayofweek
@@ -102,19 +105,19 @@ def get_price_predictions(game_id: str, days_ahead: int = 90):
             'objective': 'regression',
             'metric': 'mae',
             'boosting_type': 'gbdt',
-            'learning_rate': 0.1,
-            'num_leaves': 15,
-            'min_data_in_leaf': 10,
-            'feature_fraction': 0.8,
+            'learning_rate': 0.05,  
+            'num_leaves': 7,   
+            'min_data_in_leaf': 2,
+            'feature_fraction': 1.0,
             'verbose': -1
         }
         
         model = lgb.train(
             params,
             train_dataset,
-            num_boost_round=300,
+            num_boost_round=100,
             valid_sets=[test_dataset],
-            callbacks=[lgb.early_stopping(stopping_rounds=15, verbose=False)]
+            callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)]
         )
         
         future_dates = pd.date_range(start=df['ds'].max() + pd.Timedelta(days=1), periods=days_ahead, freq='D')

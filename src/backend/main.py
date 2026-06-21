@@ -2,13 +2,7 @@ from fastapi import FastAPI, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from cosine_similarity import cs_recommender
 from search import search_games, game_index, load_data, get_game_details, get_price_history
-
-try:
-    from discount_prediction import get_price_predictions
-except ImportError:
-    def get_price_predictions(game_id: str, days_ahead: int = 90):
-        return {}
-
+from discount_prediction import get_price_predictions
 from pydantic import BaseModel
 from typing import List, Dict
 
@@ -72,9 +66,8 @@ def get_game(game_id: int):
 def get_game_price_history(game_id: int):
     return get_price_history(game_id)
 
-@app.get('/game/{game_id}/price-predictions')
-def get_game_predictions(game_id: str, days: int = 90):
-    return get_price_predictions(game_id, days_ahead=days)
-
+@app.get("/game/{game_id}/price-predictions")
+def get_predictions(game_id: str, days: int = 30):
+    return get_price_predictions(game_id, days)
 # kill -9 $(lsof -t -i:8000)
 # uvicorn main:app --reload --port 8000
