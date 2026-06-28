@@ -4,6 +4,7 @@ import { Search, Plus } from "lucide-react";
 import { USER } from "../data/games";
 import { SelectableLibraryCard } from "../components/GameCard";
 import { HelpCircle } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 export default function Recommender() {
   const navigate = useNavigate();
@@ -38,10 +39,14 @@ export default function Recommender() {
   const allRated = ratedCount === selected.size;
   const canGenerate = selected.size >= 2 && (!isRatingMode || allRated);
 
+  const reloadPage = () => {
+    window.location.reload();
+  };
+
   React.useEffect(() => {
     setOffset(0);
     setHasMore(true);
-    
+
     const delayDebounceFn = setTimeout(() => {
       fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}&limit=${LIMIT}&offset=0`)
         .then((res) => res.json())
@@ -51,7 +56,7 @@ export default function Recommender() {
         })
         .catch((err) => console.error(err));
     }, 300);
-    
+
     return () => clearTimeout(delayDebounceFn);
   }, [q]);
 
@@ -109,20 +114,22 @@ export default function Recommender() {
       <h1 className="font-display font-black text-[44px] leading-[1.05] mb-3">
         Wybierz swoje ulubione gry
       </h1>
-      <p
-        className="text-[15px] mb-8 max-w-[800px]"
-        style={{ color: "var(--text-dim)" }}
-      >
-        Zaznacz co najmniej 2 gry ze swojej biblioteki Steam, abyśmy mogli
-        wygenerować rekomendowane dla ciebie gry. Dodatkowo, mozesz dodać ocenę
-        podanej gry, w celu lepszego dopasowania. Jeżeli zdecydujesz się na
-        ocenę podanych gier, wypełnij wszystkie ratingi, aby zapewnić systemowi
-        odpowiednie informacje.
-      </p>
-
+      <div className="flex flex-row items-center gap-[350px]">
+        <p
+          className="text-[15px] max-w-[1000px]"
+          style={{ color: "var(--text-dim)" }}
+        >
+          Zaznacz co najmniej 2 gry ze swojej biblioteki Steam, abyśmy mogli
+          wygenerować rekomendowane dla ciebie gry. Dodatkowo, mozesz dodać ocenę
+          podanej gry, w celu lepszego dopasowania. Jeżeli zdecydujesz się na
+          ocenę podanych gier, wypełnij wszystkie ratingi, aby zapewnić systemowi
+          odpowiednie informacje.
+        </p>
+        <RotateCcw onClick={reloadPage} className="cursor-pointer" />
+      </div>
       <div
         data-testid="selection-banner"
-        className="rounded-2xl border p-6 flex items-center justify-between flex-wrap gap-6 mb-8"
+        className="rounded-2xl border p-6 flex items-center justify-between flex-wrap gap-6 mb-8 mt-8"
         style={{
           background: "var(--panel)",
           borderColor: "var(--border)",
@@ -196,7 +203,7 @@ export default function Recommender() {
       {selectedGames.length > 0 && (
         <div className="mb-10">
           <div
-            className="font-mono text-[10px] uppercase tracking-wider mb-4"
+            className="font-mono text-[12px] uppercase tracking-wider mb-4"
             style={{ color: "var(--text-faint)" }}
           >
             Wybrane tytuły

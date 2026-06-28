@@ -123,7 +123,7 @@ export default function GameDetails() {
 
       <div className="mt-8 rounded-2xl overflow-hidden border p-8 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
         <div className="mb-6">
-          <h2 className="font-display font-black text-[28px] mt-3" style={{ color: "var(--text-bright)" }}>
+          <h2 className="font-display font-black text-[28px]" style={{ color: "var(--text-bright)" }}>
             Opis gry
           </h2>
           <div className="w-12 h-[2px] mx-auto mt-2 rounded-full" style={{ background: "var(--teal)" }}></div>
