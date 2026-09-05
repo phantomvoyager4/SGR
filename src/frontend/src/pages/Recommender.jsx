@@ -200,21 +200,28 @@ export default function Recommender() {
         </div>
       </div>
 
-      {selectedGames.length > 0 && (
-        <div className="mb-10">
-          <div
-            className="font-mono text-[12px] uppercase tracking-wider mb-4"
-            style={{ color: "var(--text-faint)" }}
-          >
-            Wybrane tytuły
-          </div>
-          <div className="flex gap-4 flex-wrap">
-            {selectedGames
+      <div className="mb-10">
+        <div
+          className="font-mono text-[12px] uppercase tracking-wider mb-4"
+          style={{ color: "var(--text-faint)" }}
+        >
+          Wybrane tytuły
+        </div>
+        <div className="flex gap-4 flex-nowrap overflow-x-auto pb-2" style={{ minHeight: "200px" }}>
+          {selectedGames.length === 0 ? (
+            <div
+              className="flex items-center justify-center w-full h-[200px] rounded-2xl border border-dashed"
+              style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}
+            >
+              Wybrane gry pojawią się tutaj
+            </div>
+          ) : (
+            selectedGames
               .filter((g) => selected.has(String(g.id)))
               .map((g) => (
                 <div
                   key={g.id}
-                  className="flex flex-col items-center bg-black w-[220px] h-[200px] rounded-2xl pt-4 gap-3"
+                  className="flex flex-col items-center bg-black w-[220px] h-[200px] rounded-2xl pt-4 gap-3 shrink-0"
                   style={{ background: "var(--panel)" }}
                 >
                   <div
@@ -262,10 +269,10 @@ export default function Recommender() {
                     />
                   </div>
                 </div>
-              ))}
-          </div>
+              ))
+          )}
         </div>
-      )}
+      </div>
 
       <div className="mb-6">
         <div
