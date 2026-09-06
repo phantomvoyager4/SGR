@@ -80,6 +80,14 @@ Follow these steps to run the project locally on your machine.
 2. **Vectorization**: We clean descriptions, tags, and genres, then vectorize them into a `float32` matrix, finally storing it as a highly compressed `.parquet` file.
 3. **Inference**: When a user selects games in their browser, the frontend passes them to FastAPI. The backend looks up the games in an `O(1)` dictionary, pulls their multi-dimensional pre-normalized vectors, averages them (`np.mean`), and calculates distance against the entire **162,000x4,098** matrix dynamically using Numpy dot operations (`np.dot`). The closest similarities are sorted via `argpartition` and returned to the UI instantly.
 
+### Visualizing the Recommendation Space
+
+To sanity-check that the vectorized feature space actually groups similar games together, `src/data_analysis/visualization/vis.ipynb` projects the full **4,098-dimensional** game vectors down to 2D with TruncatedSVD + UMAP, then runs DBSCAN over that projection to surface thematic neighborhoods. Each dense blob below is a cluster of games the recommender considers close in cosine-similarity space; scattered gray points are unclustered "noise" games.
+
+![UMAP projection of Steam games colored by DBSCAN cluster](docs/plots/umap_clusters.png)
+
+*Static preview above — [open the interactive version](docs/plots/umap_clusters.html) (download and open locally) to pan, zoom, and hover individual game titles.*
+
 ##  Design
 
 The original prototype and user experience framework were designed on Figma.  

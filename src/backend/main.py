@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, Body
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from cosine_similarity import cs_recommender
 from search import search_games, game_index, load_data, get_game_details, get_price_history
@@ -69,5 +69,7 @@ def get_game_price_history(game_id: int):
 @app.get("/game/{game_id}/price-predictions")
 def get_predictions(game_id: str, days: int = 30):
     return get_price_predictions(game_id, days)
+
+
 # kill -9 $(lsof -t -i:8000)
 # uvicorn main:app --reload --port 8000

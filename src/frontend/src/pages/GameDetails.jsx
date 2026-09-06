@@ -121,7 +121,7 @@ export default function GameDetails() {
         </div>
       </div>
 
-      <div className="mt-8 rounded-2xl overflow-hidden border p-8 text-center" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+      <div className="mt-8 rounded-2xl overflow-hidden border p-8" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
         <div className="mb-6">
           <h2 className="font-display font-black text-[28px]" style={{ color: "var(--text-bright)" }}>
             Opis gry
