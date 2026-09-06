@@ -17,7 +17,7 @@ def get_price_predictions(game_id: str, days_ahead: int = 90):
         dict with keys: dates, prices, discounts, current_price, or empty dict if no data
     """
     history = []
-    prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'games_prices')
+    prices_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data', 'games_prices')
     
     if not os.path.isdir(prices_dir):
         return {}

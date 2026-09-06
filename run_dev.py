@@ -6,7 +6,7 @@ import webbrowser
 import shutil
 
 def script():
-    project_root = Path(__file__).resolve().parent.parent        
+    project_root = Path(__file__).resolve().parent
     src_dir = project_root / "src"
     backend = src_dir / "backend"
     frontend = src_dir / "frontend"

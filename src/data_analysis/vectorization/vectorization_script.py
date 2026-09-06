@@ -99,6 +99,7 @@ def df_cleansing(data_to_df):
 
     if 'controller_support' in df.columns:
         df['controller_support'] = df['controller_support'].fillna('0').astype(str).str.replace('full', '1')
+        df['controller_support'] = pd.to_numeric(df['controller_support'])
 
     if 'recommendations' in df.columns:
         df['recommendations'] = df['recommendations'].apply(lambda x: x.get('total', 0) if isinstance(x, dict) else 0)

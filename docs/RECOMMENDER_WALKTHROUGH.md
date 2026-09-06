@@ -119,13 +119,6 @@ signal for prolific studios like Ubisoft or EA."
 `release_date.date` via `pd.to_datetime`), `recommendations` (Steam's own "recommended by N
 users" count), and `price_overview.initial` as a raw price float.
 
-**A subtle bug worth flagging**: `controller_support` is coerced to a string `'0'`/`'1'`
-(`.fillna('0').str.replace('full', '1')`) but never cast to numeric or included in the
-`scaling()` step. It survives into the final parquet as a **string column**. It still gets cast to
-`float32` successfully at serving time (pandas can quietly parse numeric-looking strings), but
-it's dead weight sitting un-scaled next to MinMax-scaled numeric features and one-hot binary
-features — a good example of the kind of feature-scaling inconsistency that's easy to miss in a
-pipeline with 4,000+ columns and worth catching in a code review.
 
 ---
 

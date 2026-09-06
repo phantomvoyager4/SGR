@@ -1,7 +1,9 @@
 import json
+import os
 
 game_chunk = 1
-file_path = f"data/games_prices/price_data_chunk_{game_chunk}.jsonl"
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+file_path = os.path.join(project_root, "data", "games_prices", f"price_data_chunk_{game_chunk}.jsonl")
 
 validation_flag = 1
 empty_lists = 0

@@ -41,11 +41,17 @@ By leveraging **Cosine Similarity** on fully vectorized game features (genres, t
 ```text
 SGR/
 ├── data/                    # Local datasets (JSONL, Parquet, Search Index)
+├── docs/                    # Walkthroughs & generated plots
 ├── src/
-│   ├── backend/             # FastAPI App, ML Scripts & Dockerfile
+│   ├── backend/             # FastAPI App, ML inference & Dockerfile (production code)
 │   ├── frontend/            # React Codebase, Tailwind configs & Dockerfile
-│   ├── data_analysis/       # Jupyter Notebooks & Data Vectorization Scripts
-│   └── games_scraper/       # Fetch & Structurize Scripts for Steam Data
+│   ├── data_analysis/       # Everything exploratory/offline, kept out of backend/
+│   │   ├── vectorization/   # Feature engineering pipeline (run.py + vectorization_script.py)
+│   │   ├── visualization/   # UMAP/DBSCAN cluster notebook
+│   │   ├── validation/      # One-off data QA scripts (e.g. price_file_validate.py)
+│   │   └── experiments/     # Superseded/prototype scripts kept for reference
+│   └── games_scraper/       # Fetch & Structurize Scripts for Steam Data (incl. price_fetcher.ipynb)
+├── run_dev.py               # Convenience script: launches backend + frontend dev servers locally
 └── docker-compose.yml       # Orchestrates the containers
 ```
 
