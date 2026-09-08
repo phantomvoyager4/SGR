@@ -119,7 +119,6 @@ signal for prolific studios like Ubisoft or EA."
 `release_date.date` via `pd.to_datetime`), `recommendations` (Steam's own "recommended by N
 users" count), and `price_overview.initial` as a raw price float.
 
-
 ---
 
 ## 4. Text features: TF-IDF over the game description (`nlp_part`)

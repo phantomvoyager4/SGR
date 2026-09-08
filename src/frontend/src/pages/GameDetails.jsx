@@ -110,7 +110,7 @@ export default function GameDetails() {
               {discount > 0 && <div className="font-mono text-[12px]" style={{ color: "var(--teal)" }}>-{discount}%</div>}
             </div>
 
-            <button className="w-full h-12 rounded-full font-bold transition-transform hover:scale-[1.02]" style={{ background: "var(--teal)", color: "#04111A" }}>
+            <button onClick={() => window.open(`https://store.steampowered.com/app/${id}`, "_blank")} className="w-full h-12 rounded-full font-bold transition-transform hover:scale-[1.02]" style={{ background: "var(--teal)", color: "#04111A" }}>
               Zagraj / Kup
             </button>
 
