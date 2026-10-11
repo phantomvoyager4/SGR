@@ -14,7 +14,7 @@ By leveraging **Cosine Similarity** on fully vectorized game features (genres, t
 
 - **Blazing Fast ML Inference**: The recommendation engine runs pure linear algebra (`np.dot` with pre-normalized vectors) on `float32` matrices. Compute times for recommendations plummeted from ~16 seconds down to **~130ms**.
 - **Smart Game Search**: Includes an intuitive search bar with automated acronym mapping (e.g., searching `cs2` routes to `Counter-Strike 2`, `gta v` routes to `Grand Theft Auto V`).
-- **Performance & Memory Optimized**: Designed to run efficiently in Docker containers using Python Garbage Collection overrides and C-level heap trimming (`malloc_trim`) to process huge Parquet matrices without triggering OS-level OOM (Out-of-Memory) killers.
+- **Performance & Memory Optimized**: Designed to run efficiently in Docker containers using Python Garbage Collection overrides to process huge Parquet matrices without triggering OS-level OOM (Out-of-Memory) killers.
 - **Modern UI/UX**: Built with React and Tailwind CSS, featuring snappy animations, responsive layouts, and interactive game cards.
 - **End-to-End Pipeline**: Includes complete automated web scraping, data structurization, and ML vectorization pipelines under the hood.
 

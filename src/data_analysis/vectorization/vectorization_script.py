@@ -33,7 +33,14 @@ def df_cleansing(data_to_df):
         df = df[df['supported_languages'].str.contains('English', case=False, na=False)]
     
     # 1. Drop columns in one vectorized operation without loops
-    cols_to_drop = ['header_image', 'reviews', 'supported_languages', 'support_info', 'game_link', 'appid', 'demos', 'ext_user_account_notice', 'drm_notice']
+    cols_to_drop = ['header_image', 
+                    'reviews', 
+                    'supported_languages', 
+                    'support_info', 'game_link',
+                    'appid',
+                    'demos', 
+                    'ext_user_account_notice', 
+                    'drm_notice']
     df = df.drop(columns=cols_to_drop, errors='ignore')
 
     # 2. Use pure pandas .str.replace chain
