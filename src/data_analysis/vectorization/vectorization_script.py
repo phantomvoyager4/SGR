@@ -37,8 +37,7 @@ def df_cleansing(data_to_df):
                     'reviews', 
                     'supported_languages', 
                     'support_info', 'game_link',
-                    'appid',
-                    'demos', 
+                    'demos',
                     'ext_user_account_notice', 
                     'drm_notice']
     df = df.drop(columns=cols_to_drop, errors='ignore')
@@ -59,7 +58,12 @@ def df_cleansing(data_to_df):
     df['genres'] = df['genres'].apply(clean_dict_list)
     df['categories'] = df['categories'].apply(clean_dict_list)
 
-    df = df.reset_index(drop=True)
+    # appid becomes the index, so it is never treated as a feature
+    df['appid'] = df['appid'].astype(int)
+    # scraper re-fetched a few games; keep the most recent record
+    df = df.drop_duplicates(subset='appid', keep='last')
+    df = df.set_index('appid')
+    assert df.index.is_unique, "duplicated appid in input data"
 
     # 4. Vectorized boolean mapping
     df['is_free'] = (df['is_free'] == True).astype(int)

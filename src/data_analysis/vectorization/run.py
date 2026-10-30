@@ -28,9 +28,8 @@ try:
         print(f"[INFO] Pipeline complete. Final dataset shape: {massive_df.shape}")
         excel_path = os.path.join(base_dir, 'data', 'parquet', 'index_table.xlsx')
         os.makedirs(os.path.dirname(excel_path), exist_ok=True)
-        index_df = massive_df['name']
-        index_df['index'] = index_df.index
-        index_df.to_excel(excel_path)
+        # index = appid
+        massive_df[['name']].to_excel(excel_path)
 
 except Exception as e:
     print(f"[ERROR - PIPELINE] Processing failed inside process_pipeline. Details: {e}")
@@ -41,7 +40,7 @@ try:
     print("Saving to Parquet...")
     output_path = os.path.join(base_dir, 'data', 'parquet', 'games_fully_vectorized.parquet')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    # Reset index so 'name' becomes a standard column before saving, maintaining it without relying on index logic
+    # Reset index so 'appid' becomes a standard column before saving
     massive_df.reset_index().to_parquet(output_path, engine='pyarrow', index=False)
     print(f"[INFO] Process complete. Saved to: {output_path}")
 except ImportError as e:
