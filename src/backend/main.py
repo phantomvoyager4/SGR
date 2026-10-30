@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from cosine_similarity import cs_recommender
+from cosine_similarity import recommend
 from search import search_games, game_index, load_data, get_game_details, get_price_history
 from discount_prediction import get_price_predictions
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import Dict
 
 class RecommenderPayload(BaseModel):
-    movie_list: List[Dict[str, float]]
+    games: Dict[int, float]   # appid -> rating 1-10
     limit: int = 15
     offset: int = 0
 
@@ -40,22 +40,9 @@ def get_games(ids: str):
 def health():
     return {"status": "ok"}
 
-@app.get('/games_by_name')
-def get_games_by_name(names: str):
-    load_data()
-    name_list = names.split('||')
-    name_set = set(n.lower() for n in name_list)
-    results = [g for g in game_index if g["title"].lower() in name_set]
-    return results
-
 @app.post('/recommender')
-def recommend(payload: RecommenderPayload):
-    response = cs_recommender(
-        movielist=payload.movie_list, 
-        limit=payload.limit, 
-        offset=payload.offset
-    )
-    return response
+def recommender(payload: RecommenderPayload):
+    return recommend(payload.games, payload.limit, payload.offset)
 
 @app.get('/game/{game_id}')
 def get_game(game_id: int):
