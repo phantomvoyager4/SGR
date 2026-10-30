@@ -15,15 +15,29 @@ export default function Recommendations() {
       .split("||")
       .filter(Boolean)
       .map((pair) => {
-        const [title, rating] = pair.split("::");
-        return { title, rating: Number(rating) };
+        const [id, rating] = pair.split("::");
+        return { id, rating: Number(rating) };
       });
   }, [payloadStr]);
 
-  const basedTitles = useMemo(
-    () => parsedPairs.map((p) => p.title),
-    [parsedPairs],
-  );
+  const [basedTitles, setBasedTitles] = useState([]);
+  useEffect(() => {
+    const ids = parsedPairs.map((p) => p.id).join(",");
+    if (!ids) {
+      setBasedTitles([]);
+      return;
+    }
+    fetch(`http://localhost:8000/games?ids=${ids}`)
+      .then((res) => res.json())
+      .then((details) => {
+        const titleById = new Map(details.map((d) => [String(d.id), d.title]));
+        setBasedTitles(parsedPairs.map((p) => titleById.get(p.id) || p.id));
+      })
+      .catch((err) => {
+        console.error(err);
+        setBasedTitles(parsedPairs.map((p) => p.id));
+      });
+  }, [parsedPairs]);
   const basedOn = basedTitles.join(", ") || "Wybierz gry, aby wygenerować rekomendacje";
 
   const [priceRange, setPriceRange] = useState(300);
@@ -56,12 +70,12 @@ export default function Recommendations() {
       setLoadingMore(true);
     }
 
-    const postPayload = parsedPairs.map((p) => ({ [p.title]: p.rating }));
+    const games = Object.fromEntries(parsedPairs.map((p) => [p.id, p.rating]));
 
     const reqRecommender = fetch(`http://localhost:8000/recommender`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ movie_list: postPayload, limit: LIMIT, offset: currentOffset }),
+      body: JSON.stringify({ games, limit: LIMIT, offset: currentOffset }),
     }).then((res) => res.json());
 
     const reqRates = fetch("https://open.er-api.com/v6/latest/PLN")
@@ -79,18 +93,19 @@ export default function Recommendations() {
           return;
         }
 
-        const formatted = data.map((item) => {
-          const gameName = Object.keys(item)[0];
-          const similarity = item[gameName];
-          return { name: gameName, match: Math.round(similarity * 100) };
-        });
+        const formatted = data.map((item) => ({
+          id: String(item.appid),
+          name: item.name,
+          match: Math.round(item.similarity * 100),
+        }));
 
-        const namesQuery = formatted.map((g) => g.name).join("||");
-        return fetch(`http://localhost:8000/games_by_name?names=${encodeURIComponent(namesQuery)}`)
+        const idsQuery = formatted.map((g) => g.id).join(",");
+        return fetch(`http://localhost:8000/games?ids=${idsQuery}`)
           .then((res) => res.json())
           .then((details) => {
+            const detailById = new Map(details.map((d) => [String(d.id), d]));
             const merged = formatted.map((rec) => {
-              const detail = details.find((d) => d.title === rec.name);
+              const detail = detailById.get(rec.id);
               
               let rawPrice = detail && (typeof detail.price !== 'undefined') ? detail.price : 0;
               let rawCurrency = detail && detail.currency ? detail.currency : 'PLN';
@@ -103,8 +118,8 @@ export default function Recommendations() {
               }
 
               return {
-                id: detail ? detail.id : rec.name,
-                title: rec.name,
+                id: rec.id,
+                title: detail ? detail.title : rec.name,
                 match: rec.match,
                 cover: detail ? detail.cover : "",
                 tag: detail && detail.genre && detail.genre.length > 0 ? detail.genre[0] : "INNE",
@@ -131,7 +146,7 @@ export default function Recommendations() {
   };
 
   useEffect(() => {
-    if (basedTitles.length === 0) return;
+    if (parsedPairs.length === 0) return;
     setRecsData([]);
     setOffset(0);
     setHasMore(true);

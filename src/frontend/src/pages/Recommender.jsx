@@ -103,7 +103,7 @@ export default function Recommender() {
     const payload = selectedGames
       .map((g) => {
         const r = ratings[g.id] || 1;
-        return `${g.title}::${r}`;
+        return `${g.id}::${r}`;
       })
       .join("||");
     navigate(`/recommendations?payload=${encodeURIComponent(payload)}`);
