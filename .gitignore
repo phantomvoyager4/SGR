@@ -2,6 +2,7 @@
 config.env
 .env
 __pycache__
+data/external
 
 node_modules
 dist
