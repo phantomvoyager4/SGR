@@ -1,0 +1,27 @@
+SGR recommender evaluation - prototype
+
+users evaluated:  2,000 (random sample, seed 50, of 1,652,783)
+catalog size:     155,353 games
+method:           chronological leave-one-out; the user's history is the input,
+                  a hit means the held-out most recent game is in the top K
+
+Hit rate (HR@K)
+               SGR   Most popular    Random   Random (expected)
+HR@5         1.10%          1.80%     0.00%             0.0032%
+HR@10        1.55%          3.75%     0.00%             0.0064%
+HR@15        1.90%          5.20%     0.00%             0.0097%
+HR@20        2.35%          6.85%     0.00%             0.0129%
+
+SGR compared with baselines (SGR HR / baseline HR)
+          vs random (expected)   vs most popular
+HR@5                    341.8x              0.6x
+HR@10                   240.8x              0.4x
+HR@15                   196.8x              0.4x
+HR@20                   182.5x              0.3x
+
+Hits (users with the target in the top K)
+               SGR   Most popular    Random
+HR@5            22             36         0
+HR@10           31             75         0
+HR@15           38            104         0
+HR@20           47            137         0
