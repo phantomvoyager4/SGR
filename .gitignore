@@ -3,6 +3,10 @@ config.env
 .env
 __pycache__
 data/external
+data/games_informations
+data/games_prices
+data/games_id_all.json
+data/search_index.json
 
 node_modules
 dist
