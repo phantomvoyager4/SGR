@@ -1,0 +1,36 @@
+SGR recommender evaluation - prototype
+
+users evaluated:  2,000 (random sample, seed 50, of 1,652,783)
+catalog size:     155,353 games, 46,037 on average available at the target date
+method:           chronological leave-one-out; the user's history is the input,
+                  a hit means the held-out most recent game is in the top K;
+                  only games available on the target's review date are recommended
+                  (except 'SGR no filter', which scores like the backend's recommend())
+
+Hit rate (HR@K)
+                    SGR  SGR no filter   Most popular         Random  Random (exp.)
+HR@5              1.40%          1.10%          1.80%          0.00%        0.0134%
+HR@10             1.80%          1.55%          3.95%          0.00%        0.0268%
+HR@15             2.35%          1.90%          5.40%          0.00%        0.0402%
+HR@20             3.10%          2.35%          7.00%          0.00%        0.0536%
+
+SGR compared with baselines (SGR HR / baseline HR)
+          vs random (expected)   vs most popular
+HR@5                    104.4x              0.8x
+HR@10                    67.1x              0.5x
+HR@15                    58.4x              0.4x
+HR@20                    57.8x              0.4x
+
+Hits (users with the target in the top K)
+                    SGR  SGR no filter   Most popular         Random
+HR@5                 28             22             36              0
+HR@10                36             31             79              0
+HR@15                47             38            108              0
+HR@20                62             47            140              0
+
+Experiment: SGR + ALPHA * popularity (HR@K)
+            a=0.0    a=0.2    a=0.4    a=0.6    a=0.8    a=1.0   Popular
+HR@5        1.40%    2.75%    3.10%    3.15%    3.20%    3.00%     1.80%
+HR@10       1.80%    4.30%    5.10%    5.35%    5.30%    5.55%     3.95%
+HR@15       2.35%    5.85%    7.00%    7.55%    7.45%    7.60%     5.40%
+HR@20       3.10%    7.00%    8.20%    9.00%    9.40%    9.60%     7.00%
