@@ -6,7 +6,7 @@
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-Machine_Learning-F7931E?logo=scikit-learn&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-**Steam Game Recommender (SGR)** is a full-stack, machine-learning-powered web application that provides highly accurate, personalized game recommendations out of a dataset spanning over **162,000+ Steam games**. 
+**Steam Game Recommender (SGR)** is a full-stack, machine-learning-powered web application that provides highly accurate, personalized game recommendations out of a dataset spanning over **162,000+ Steam games**.
 
 By leveraging **Cosine Similarity** on fully vectorized game features (genres, tags, descriptions), SGR can instantly find titles similar to a user's selected favorites.
 
@@ -21,19 +21,23 @@ By leveraging **Cosine Similarity** on fully vectorized game features (genres, t
 ## Tech Stack
 
 ### Data Science & Machine Learning
+
 - **Pandas & NumPy**: For heavy data manipulation and multidimensional matrix math.
-- **Scikit-Learn**: For feature extraction and vector space modeling (Cosine Similarity).
+- **Scikit-Learn**: For feature extraction and vector space modeling.
 - **PyArrow (Parquet)**: Highly compressed, columnar data storage for rapid dataset hydration.
 
 ### Backend (API)
+
 - **FastAPI & Uvicorn**: Delivering a high-throughput, async REST API.
 - **Python 3.12**: Handling file systems, advanced hardware-level garbage collection, and request routing.
 
 ### Frontend
+
 - **React (via CRA/Craco) & React Router**: Dynamic client-side routing and state management.
 - **Tailwind CSS & Lucide Icons**: Modern dashboard styling and responsive components.
 
 ### DevOps
+
 - **Docker & Docker Compose**: Fully containerized multi-tier architecture with live-reloading tied via mounted volumes.
 
 ## Project Structure
@@ -61,12 +65,13 @@ SGR/
 Follow these steps to run the project locally on your machine.
 
 ### Prerequisites
+
 1. Install **[Docker Engine](https://www.docker.com/get-started/)** and ensure it's running.
 2. Download the pre-computed ML dataset models.
 
 ### Installation
 
-1. **Download the Vectorized Database**: 
+1. **Download the Vectorized Database**:
    - Navigate to our [Google Drive Data Repository](https://drive.google.com/drive/folders/1hSaK7Kfyjcik1qe9EvCY70DOW7z_iiMU?usp=sharing).
    - Download the `index_table.xlsx` and the `.parquet` files.
 2. **Mount the Data**:
@@ -103,12 +108,12 @@ To sanity-check that the vectorized feature space actually groups similar games 
 
 **Files**
 
-| File | What it does | Output |
-|---|---|---|
+| File                              | What it does                                                                                                                              | Output                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `prepare_evaluation_data.ipynb` | Keeps positive reviews of games that have a feature vector, from users with 4–10 liked games, and splits each user into history + target | `data/external/recommendations_ready.json` |
-| `prepare_release_dates.py` | Finds the date each game became available: the earlier of the Steam release date and its first review | `data/external/release_dates.parquet` |
-| `evaluation_system.ipynb` | Runs the evaluation on a sample of 2,000 users (one seed) and a popularity-boost experiment | `evaluation_report.txt` |
-| `run_seeds.py` | Runs the notebook for 6 seeds and combines the results, with 95% intervals | `reports/` |
+| `prepare_release_dates.py`      | Finds the date each game became available: the earlier of the Steam release date and its first review                                     | `data/external/release_dates.parquet`      |
+| `evaluation_system.ipynb`       | Runs the evaluation on a sample of 2,000 users (one seed) and a popularity-boost experiment                                               | `evaluation_report.txt`                    |
+| `run_seeds.py`                  | Runs the notebook for 6 seeds and combines the results, with 95% intervals                                                                | `reports/`                                 |
 
 **Reproduce it**
 
@@ -119,11 +124,11 @@ To sanity-check that the vectorized feature space actually groups similar games 
 
 **Results** (pooled over 6 seeds, 12,000 users, from `reports/evaluation_report_seeds.txt`)
 
-| | SGR | Most popular | Random (expected) |
-|---|---|---|---|
-| HR@5 | 1.22% | 2.43% | 0.014% |
-| HR@10 | 1.80% | 4.37% | 0.027% |
-| HR@20 | 2.78% | 7.05% | 0.055% |
+|       | SGR   | Most popular | Random (expected) |
+| ----- | ----- | ------------ | ----------------- |
+| HR@5  | 1.22% | 2.43%        | 0.014%            |
+| HR@10 | 1.80% | 4.37%        | 0.027%            |
+| HR@20 | 2.78% | 7.05%        | 0.055%            |
 
 - SGR finds the user's next game about **50x as often as random**, so the feature vectors carry real signal.
 - **Most popular beats plain SGR**, because users often go on to like a hit, while SGR recommends similar but often niche games.
@@ -131,7 +136,7 @@ To sanity-check that the vectorized feature space actually groups similar games 
 
 ![HR@K by popularity boost ALPHA, mean of 6 seeds](src/data_analysis/system_evaluation/reports/hr_by_alpha_seeds.png)
 
-##  Design
+## Design
 
-The original prototype and user experience framework were designed on Figma.  
+The original prototype and user experience framework were designed on Figma.
 [View Figma Design Specs](https://www.figma.com/design/X0vyohfhJrMyU7qfeGo6Ll/Untitled?node-id=0-1&p=f&t=1YmrUn7rBX9DdiE7-0)
