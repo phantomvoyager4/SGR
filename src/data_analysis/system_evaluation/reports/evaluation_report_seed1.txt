@@ -9,10 +9,10 @@ method:           chronological leave-one-out; the user's history is the input,
 
 Hit rate (HR@K)
                     SGR  SGR no filter   Most popular         Random  Random (exp.)
-HR@5              1.10%          0.85%          3.00%          0.00%        0.0135%
-HR@10             2.05%          1.35%          5.05%          0.00%        0.0271%
-HR@15             2.65%          1.80%          6.45%          0.00%        0.0406%
-HR@20             3.10%          2.45%          7.70%          0.00%        0.0542%
+HR@5              1.10%          0.85%          2.95%          0.00%        0.0135%
+HR@10             2.05%          1.35%          4.75%          0.00%        0.0271%
+HR@15             2.65%          1.80%          6.15%          0.00%        0.0406%
+HR@20             3.10%          2.45%          7.15%          0.00%        0.0542%
 
 SGR compared with baselines (SGR HR / baseline HR)
           vs random (expected)   vs most popular
@@ -23,14 +23,14 @@ HR@20                    57.2x              0.4x
 
 Hits (users with the target in the top K)
                     SGR  SGR no filter   Most popular         Random
-HR@5                 22             17             60              0
-HR@10                41             27            101              0
-HR@15                53             36            129              0
-HR@20                62             49            154              0
+HR@5                 22             17             59              0
+HR@10                41             27             95              0
+HR@15                53             36            123              0
+HR@20                62             49            143              0
 
 Experiment: SGR + ALPHA * popularity (HR@K)
             a=0.0    a=0.2    a=0.4    a=0.6    a=0.8    a=1.0   Popular
-HR@5        1.10%    2.35%    2.90%    2.95%    3.05%    2.65%     3.00%
-HR@10       2.05%    4.45%    5.60%    5.45%    5.25%    5.40%     5.05%
-HR@15       2.65%    5.75%    7.05%    7.25%    7.30%    7.60%     6.45%
-HR@20       3.10%    6.90%    8.30%    9.20%    9.35%    9.25%     7.70%
+HR@5        1.10%    2.20%    2.80%    2.80%    2.65%    2.55%     2.95%
+HR@10       2.05%    4.20%    4.95%    5.25%    4.80%    4.65%     4.75%
+HR@15       2.65%    5.80%    6.90%    6.70%    6.80%    6.90%     6.15%
+HR@20       3.10%    6.85%    8.05%    8.60%    8.55%    8.55%     7.15%

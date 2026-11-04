@@ -113,28 +113,31 @@ To sanity-check that the vectorized feature space actually groups similar games 
 | `prepare_evaluation_data.ipynb` | Keeps positive reviews of games that have a feature vector, from users with 4–10 liked games, and splits each user into history + target | `data/external/recommendations_ready.json` |
 | `prepare_release_dates.py`      | Finds the date each game became available: the earlier of the Steam release date and its first review                                     | `data/external/release_dates.parquet`      |
 | `evaluation_system.ipynb`       | Runs the evaluation on a sample of 2,000 users (one seed) and a popularity-boost experiment                                               | `evaluation_report.txt`                    |
-| `run_seeds.py`                  | Runs the notebook for 6 seeds and combines the results, with 95% intervals                                                                | `reports/`                                 |
+| `run_seeds.py`                  | Runs the notebook for 6 seeds: picks the popularity boost's ALPHA on 3 of them, then reports on the other 3, with 95% intervals          | `reports/`                                 |
 
 **Reproduce it**
 
 1. Download `recommendations.csv` from the Kaggle link above into `data/external/`.
 2. Make sure `data/parquet/games_fully_vectorized.parquet` (see [Installation](#installation)) and the scraped `data/games_informations/games_chunk_*.jsonl` files are in place.
 3. Run `prepare_evaluation_data.ipynb`, then `python prepare_release_dates.py`.
-4. Run `evaluation_system.ipynb` for one sample, or `python run_seeds.py` for all seeds (about 2.5 minutes per seed).
+4. Run `evaluation_system.ipynb` for one sample, or `python run_seeds.py` for all seeds (about 3 minutes per seed).
 
-**Results** (pooled over 6 seeds, 12,000 users, from `reports/evaluation_report_seeds.txt`)
+**Results** (test seeds 42, 99, 123: 6,000 users, from `reports/evaluation_report_seeds.txt`)
 
-|       | SGR   | Most popular | Random (expected) |
-| ----- | ----- | ------------ | ----------------- |
-| HR@5  | 1.22% | 2.43%        | 0.014%            |
-| HR@10 | 1.80% | 4.37%        | 0.027%            |
-| HR@20 | 2.78% | 7.05%        | 0.055%            |
+The popularity boost's ALPHA was picked on separate tuning seeds (50, 1, 7) and frozen before the test seeds ran, so these numbers aren't fitted to the users they are measured on.
+
+|       | SGR + 0.7 × popularity | SGR   | Most popular | Random (expected) |
+| ----- | ---------------------- | ----- | ------------ | ----------------- |
+| HR@5  | 2.78%                  | 1.23% | 2.17%        | 0.014%            |
+| HR@10 | 4.90%                  | 1.80% | 3.78%        | 0.027%            |
+| HR@15 | 6.68%                  | 2.17% | 5.18%        | 0.041%            |
+| HR@20 | 8.17%                  | 2.70% | 6.42%        | 0.055%            |
 
 - SGR finds the user's next game about **50x as often as random**, so the feature vectors carry real signal.
 - **Most popular beats plain SGR**, because users often go on to like a hit, while SGR recommends similar but often niche games.
-- **Adding popularity fixes that.** Scoring games by `SGR + ALPHA × popularity` with ALPHA ≈ 1 reaches **8.7% HR@20**, above both SGR alone and the popularity baseline. This experiment lives only in the notebook; the app still uses plain SGR.
+- **Adding popularity fixes that.** Scoring games by `SGR + ALPHA × popularity` with ALPHA = 0.7 (best pooled HR@15 on the tuning seeds) reaches **8.17% HR@20** on the test seeds [95% interval 7.47–8.86], about 1.3x the popularity baseline (6.42% [5.80–7.04]). This experiment lives only in the notebook; the app still uses plain SGR.
 
-![HR@K by popularity boost ALPHA, mean of 6 seeds](src/data_analysis/system_evaluation/reports/hr_by_alpha_seeds.png)
+![HR@K by popularity boost ALPHA on the tuning seeds](src/data_analysis/system_evaluation/reports/hr_by_alpha_tuning.png)
 
 ## Design
 

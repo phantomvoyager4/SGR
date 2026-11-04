@@ -1,0 +1,9 @@
+{
+ "alpha": 0.7,
+ "selected_by": "pooled HR@15",
+ "tuning_seeds": [
+  50,
+  1,
+  7
+ ]
+}
