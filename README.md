@@ -77,6 +77,7 @@ Follow these steps to run the project locally on your machine.
 2. **Mount the Data**:
    - Inside the repository's `data/` directory, create a folder named `parquet`.
    - Place the downloaded files directly into `data/parquet/`.
+   - The recommender also needs Steam's review count of every game in `data/games_informations/recommendations_count.json`, for its popularity boost. Build it from the scraped `data/games_informations/games_chunk_*.jsonl` files with `python data/games_informations/extract_recommendations.py`.
 3. **Build and Run via Docker**:
    Open a terminal in the project root and spin up the containers:
    ```bash
@@ -90,7 +91,7 @@ Follow these steps to run the project locally on your machine.
 
 1. **Scraping**: `games_scraper/` routinely hits Steam APIs to retrieve massive chunks of raw `.jsonl` data.
 2. **Vectorization**: We clean descriptions, tags, and genres, then vectorize them into a `float32` matrix, finally storing it as a highly compressed `.parquet` file.
-3. **Inference**: When a user selects games in their browser, the frontend passes them to FastAPI. The backend looks up the games in an `O(1)` dictionary, pulls their multi-dimensional pre-normalized vectors, averages them (`np.mean`), and calculates distance against the entire **162,000x4,098** matrix dynamically using Numpy dot operations (`np.dot`). The closest similarities are sorted via `argpartition` and returned to the UI instantly.
+3. **Inference**: When a user selects games in their browser, the frontend passes them to FastAPI. The backend looks up the games in an `O(1)` dictionary, pulls their multi-dimensional pre-normalized vectors, averages them (`np.mean`), and calculates distance against the entire **162,000x4,098** matrix dynamically using Numpy dot operations (`np.dot`). Each game's score is its cosine similarity plus a popularity boost, `0.8 × log(1 + Steam review count)` scaled to 0–1 (see [Evaluation](#evaluation)). The best scores are sorted via `argpartition` and returned to the UI instantly. The "% Match" shown in the UI is the cosine similarity alone.
 
 ### Visualizing the Recommendation Space
 
@@ -135,7 +136,8 @@ The popularity boost's ALPHA was picked on separate tuning seeds (50, 1, 7) and 
 
 - SGR finds the user's next game about **50x as often as random**, so the feature vectors carry real signal.
 - **Most popular beats plain SGR**, because users often go on to like a hit, while SGR recommends similar but often niche games.
-- **Adding popularity fixes that.** Scoring games by `SGR + ALPHA × popularity` with ALPHA = 0.7 (best pooled HR@15 on the tuning seeds) reaches **8.17% HR@20** on the test seeds [95% interval 7.47–8.86], about 1.3x the popularity baseline (6.42% [5.80–7.04]). This experiment lives only in the notebook; the app still uses plain SGR.
+- **Adding popularity fixes that.** Scoring games by `SGR + ALPHA × popularity` with ALPHA = 0.7 (best pooled HR@15 on the tuning seeds) reaches **8.17% HR@20** on the test seeds [95% interval 7.47–8.86], about 1.3x the popularity baseline (6.42% [5.80–7.04]).
+- **The app uses this boost, with Steam review counts.** The likes in the dataset end in 2022, so the backend counts popularity from Steam's review counts instead (`recommendations_count.json`). With its own ALPHA = 0.8, picked the same way, it reaches 7.08% HR@15 and 8.63% HR@20 on the test seeds. That is not significantly different from the likes (paired bootstrap), so `recommend()` in `src/backend/cosine_similarity.py` uses `score = similarity + 0.8 × popularity`.
 
 ![HR@K by popularity boost ALPHA on the tuning seeds](src/data_analysis/system_evaluation/reports/hr_by_alpha_tuning.png)
 

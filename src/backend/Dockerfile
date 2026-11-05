@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/backend /app/src/
 COPY data/search_index.json /app/data/
 COPY data/parquet/ /app/data/parquet/
+COPY data/games_informations/recommendations_count.json /app/data/games_informations/
 
 EXPOSE 8000
 

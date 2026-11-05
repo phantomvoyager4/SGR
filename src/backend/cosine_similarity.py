@@ -1,20 +1,31 @@
-import pandas as pd
-import numpy as np
+import json
 import os
+
+import numpy as np
+import pandas as pd
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
+MATRIX_PATH = os.path.join(DATA_DIR, 'parquet', 'games_fully_vectorized.parquet')
+# Steam review count of every game, built by data/games_informations/extract_recommendations.py
+REVIEW_COUNTS_PATH = os.path.join(DATA_DIR, 'games_informations', 'recommendations_count.json')
+
+# score = cosine similarity + POPULARITY_WEIGHT * popularity. The weight was picked on separate tuning users
+# and checked on unseen test users in src/data_analysis/system_evaluation/evaluation_system.ipynb (ALPHA for
+# Steam review counts, reports/selected_alpha.json), where it raised HR@15 from 2.17% to 7.08%.
+POPULARITY_WEIGHT = 0.8
 
 _matrix = None
 _appids = None
 _names = None
 _appid_to_index = None
+_popularity = None
 
 def _load_data_if_needed():
-    global _matrix, _appids, _names, _appid_to_index
+    global _matrix, _appids, _names, _appid_to_index, _popularity
     if _matrix is not None:
         return
 
-    path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'parquet', 'games_fully_vectorized.parquet')
-
-    df = pd.read_parquet(path)
+    df = pd.read_parquet(MATRIX_PATH)
 
     _appids = df['appid'].to_numpy()
     _names = df['name'].to_numpy()
@@ -28,7 +39,30 @@ def _load_data_if_needed():
     _matrix = raw / norms
     del raw
 
-def recommend(games: dict[int, float], limit: int = 15, offset: int = 0):
+    _popularity = _load_popularity(_appids)
+
+def _load_popularity(appids):
+    """Popularity of every game in the matrix's row order, scaled to 0-1.
+
+    log(1 + Steam review count), divided by the same value of the most reviewed game. The log stops a few huge
+    hits from taking over. Steam leaves out the count for games with about 100 reviews or fewer, so they get 0.
+    """
+    with open(REVIEW_COUNTS_PATH, encoding='utf-8') as f:
+        counts = {int(appid): count for appid, count in json.load(f).items()}
+
+    log_counts = np.log1p(np.array([counts.get(int(a), 0) for a in appids], dtype=np.float64))
+    return (log_counts / log_counts.max()).astype(np.float32)
+
+def recommend(games: dict[int, float], limit: int = 15, offset: int = 0,
+              popularity_weight: float = POPULARITY_WEIGHT):
+    """Games most similar to the given ones, boosted by popularity.
+
+    games:             app id -> rating 1-10, used as the weight of the game in the user's profile
+    popularity_weight: how much popularity adds to the score; 0 ranks by cosine similarity alone
+
+    Returns the games ranked offset..offset+limit, without the input games. "similarity" is the cosine
+    similarity to the profile, without the popularity boost.
+    """
     _load_data_if_needed()
 
     rows, weights = [], []
@@ -48,15 +82,16 @@ def recommend(games: dict[int, float], limit: int = 15, offset: int = 0):
     profile /= profile_norm
 
     sims = _matrix @ profile
+    scores = sims + np.float32(popularity_weight) * _popularity
     # don't recommend the input games
-    sims[rows] = -1.0
+    scores[rows] = -np.inf
 
-    k = min(offset + limit, len(sims))
+    k = min(offset + limit, len(scores) - len(set(rows)))
     if k <= 0 or offset >= k:
         return []
 
-    top = np.argpartition(sims, -k)[-k:]
-    top = top[np.argsort(-sims[top])][offset:k]
+    top = np.argpartition(scores, -k)[-k:]
+    top = top[np.argsort(-scores[top])][offset:k]
 
     return [{"appid": int(_appids[i]), "name": _names[i], "similarity": round(float(sims[i]), 3)}
             for i in top]
