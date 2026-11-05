@@ -5,6 +5,9 @@ optimistic. So the seeds are split in two:
 - tuning seeds (TUNE_SEEDS): their pooled HR@SELECT_K over the fine ALPHA grid picks ALPHA
 - test seeds (TEST_SEEDS): run only after ALPHA is frozen; every reported number comes from them
 
+ALPHA is picked separately for each popularity source (likes before the target, Steam review counts), and the two
+sources are compared on the test seeds with a paired bootstrap of the difference in HR@K.
+
 The notebook's code cells are executed unchanged, one seed after another, in a single Python process
 (so the 2.5 GB feature matrix is loaded only once). The only differences from running the notebook by hand:
 - `SEED` is set to the seed being tested
@@ -14,8 +17,9 @@ The notebook's code cells are executed unchanged, one seed after another, in a s
 Outputs, all in reports/:
 - evaluation_report_seed<N>.txt   the notebook's report for each seed
 - results_seed<N>.json            the numbers the summary is built from
+- ranks_seed<N>.npz               each user's target rank for every ALPHA and popularity source (for the paired bootstrap)
 - seed_plots/*.png                the notebook's plots for each seed
-- selected_alpha.json             the ALPHA picked on the tuning seeds, written before any test seed runs
+- selected_alpha.json             the ALPHA of each popularity source picked on the tuning seeds, written before any test seed runs
 - evaluation_report_seeds.txt     the ALPHA selection on the tuning seeds and the results on the test seeds
 - hr_by_alpha_tuning.png          HR@K over ALPHA on the tuning seeds, with the selected ALPHA marked
 
@@ -50,6 +54,9 @@ KS = ["5", "10", "15", "20"]  # must match KS in the notebook (as strings, becau
 METHODS = ["SGR", "SGR (no date filter)", "Most popular"]
 SHORT = {"SGR": "SGR", "SGR (no date filter)": "SGR no filter", "Most popular": "Most popular"}
 K_COLORS = {"5": "#86b6ef", "10": "#3987e5", "15": "#1c5cab", "20": "#0d366b"}  # light (small K) to dark (large K)
+SOURCES = {"likes": "grid_hr", "steam": "steam_grid_hr"}  # popularity source -> its HR grid in results_seed<N>.json
+SOURCE_NAMES = {"likes": "likes before the target", "steam": "Steam review counts"}
+N_BOOTSTRAP = 1000  # resamples of the test users for the paired bootstrap
 
 
 def notebook_code_cells(path):
@@ -75,7 +82,7 @@ def run_seed(cells, seed):
     report_path = OUT_DIR / f"evaluation_report_seed{seed}.txt"
     first_cell = cells[0].replace(old_seed, f"SEED = {seed}\n").replace(old_report, f"REPORT_PATH = Path(r\"{report_path}\")")
 
-    plot_names = ["hr_by_k", "hr_by_alpha"]  # the notebook's plots, in the order they are drawn
+    plot_names = ["hr_by_k", "hr_by_alpha", "hr_by_alpha_sources"]  # the notebook's plots, in the order they are drawn
     plot_count = [0]
 
     def save_plot(*args, **kwargs):
@@ -100,7 +107,12 @@ def run_seed(cells, seed):
         "expected_random": namespace["expected_random"],
         "boost_hits": {str(alpha): hits for alpha, hits in namespace["boost_hits"].items()},
         "grid_hr": {str(alpha): row for alpha, row in namespace["grid_hr"].T.to_dict().items()},
+        "steam_grid_hr": {str(alpha): row for alpha, row in namespace["steam_grid_hr"].T.to_dict().items()},
     }
+    # every user's target rank for every ALPHA, in the sample's order: the paired bootstrap needs them per user
+    np.savez_compressed(OUT_DIR / f"ranks_seed{seed}.npz", alpha=namespace["ALPHA_GRID"],
+                        likes=namespace["grid_ranks"].astype(np.int32),
+                        steam=namespace["steam_grid_ranks"].astype(np.int32))
     # round-trip through JSON so the results look the same as when they are read back from the file
     results = json.loads(json.dumps(results, default=float))
     (OUT_DIR / f"results_seed{seed}.json").write_text(json.dumps(results, indent=1))
@@ -120,26 +132,28 @@ def pooled(hit_counts, n_total):
     return p, p - half, p + half
 
 
-def alpha_curves(runs):
+def alpha_curves(runs, grid_key="grid_hr"):
     """HR@K over the fine ALPHA grid for every seed.
 
-    runs: list of result dictionaries, one per seed
+    runs:     list of result dictionaries, one per seed
+    grid_key: which popularity source's grid, a value of SOURCES
 
     Returns (ALPHA values, {K: array of shape (number of seeds, number of ALPHA values)}).
     All seeds have the same number of users, so the mean over seeds equals the pooled hit rate.
     """
-    grid = sorted(runs[0]["grid_hr"], key=float)
+    grid = sorted(runs[0][grid_key], key=float)
     alpha_values = np.array([float(a) for a in grid])
-    curves = {k: np.array([[r["grid_hr"][a][f"HR@{k}"] for a in grid] for r in runs]) for k in KS}
+    curves = {k: np.array([[r[grid_key][a][f"HR@{k}"] for a in grid] for r in runs]) for k in KS}
     return alpha_values, curves
 
 
-def select_alpha(tune_runs):
+def select_alpha(tune_runs, grid_key="grid_hr"):
     """The ALPHA with the highest pooled HR@SELECT_K on the tuning seeds (the smallest one on a tie).
 
     tune_runs: list of result dictionaries of the tuning seeds
+    grid_key:  which popularity source's grid, a value of SOURCES
     """
-    alpha_values, curves = alpha_curves(tune_runs)
+    alpha_values, curves = alpha_curves(tune_runs, grid_key)
     return float(alpha_values[curves[SELECT_K].mean(axis=0).argmax()])
 
 
@@ -155,6 +169,64 @@ def boost_hits(runs, alpha, k):
         key = min(r["grid_hr"], key=lambda a: abs(float(a) - alpha))  # the grid key of this ALPHA
         hits.append(round(r["grid_hr"][key][f"HR@{k}"] * N_USERS))
     return hits
+
+
+def test_hits(seeds, source, alpha, k):
+    """Whether each test user's target is in the top K for one popularity source at one ALPHA.
+
+    seeds:  the test seeds, whose ranks_seed<N>.npz are read
+    source: "likes" or "steam", a key of SOURCES
+    alpha:  the frozen ALPHA of that source, one of the grid's values
+    k:      K as a string, e.g. "15"
+
+    Returns a boolean array with one entry per user, the seeds one after another in the same order for every source.
+    """
+    hits = []
+    for seed in seeds:
+        ranks = np.load(OUT_DIR / f"ranks_seed{seed}.npz")
+        row = np.argmin(abs(ranks["alpha"] - alpha))
+        hits.append(ranks[source][row] <= int(k))
+    return np.concatenate(hits)
+
+
+def source_comparison(tune_runs, test_runs, alphas):
+    """Text lines comparing the two popularity sources: ALPHA selection on the tuning seeds, then a paired
+    bootstrap of the difference in HR@K on the test seeds.
+
+    tune_runs: list of result dictionaries of the tuning seeds
+    test_runs: list of result dictionaries of the test seeds; their ranks_seed<N>.npz must exist
+    alphas:    {source: the ALPHA picked for it on the tuning seeds}
+    """
+    lines = ["3. Popularity source: likes before the target vs Steam review counts", "",
+             "Each source's ALPHA is picked on the tuning seeds with the same rule; the comparison uses the test seeds.",
+             "Steam counts are from today (they include reviews written after the target), which favours them.",
+             "", "Pooled tuning HR@K at selected ALPHA values, Steam review counts"]
+    picks = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    alpha_values, curves = alpha_curves(tune_runs, SOURCES["steam"])
+    lines.append(f"{'':8}" + "".join(f"{f'a={a}':>9}" for a in picks))
+    for k in KS:
+        mean = curves[k].mean(axis=0)
+        lines.append(f"{f'HR@{k}':8}" + "".join(f"{mean[np.argmin(abs(alpha_values - a))]:>9.2%}" for a in picks))
+    lines += ["", "Selected ALPHA: " + ", ".join(f"{SOURCE_NAMES[s]} {a:g}" for s, a in alphas.items())]
+
+    seeds = [r["seed"] for r in test_runs]
+    n_test = N_USERS * len(test_runs)
+    rng = np.random.default_rng(0)
+    resamples = rng.integers(0, n_test, size=(N_BOOTSTRAP, n_test))  # the same resamples for every K
+    lines += ["", f"Test seeds, {n_test:,} users: Steam minus likes, with a {N_BOOTSTRAP:,}-resample paired bootstrap",
+              f"{'':8}{'likes':>9}{'Steam':>9}{'diff':>10}{'95% interval':>20}{'only likes':>12}{'only Steam':>12}"]
+    for k in KS:
+        likes = test_hits(seeds, "likes", alphas["likes"], k)
+        steam = test_hits(seeds, "steam", alphas["steam"], k)
+        assert likes.sum() == sum(boost_hits(test_runs, alphas["likes"], k)), "ranks and results files disagree"
+        diff = steam.astype(int) - likes.astype(int)
+        low, high = np.percentile(diff[resamples].mean(axis=1), [2.5, 97.5])
+        lines.append(f"{f'HR@{k}':8}{likes.mean():>9.2%}{steam.mean():>9.2%}{f'{diff.mean() * 100:+.2f} pt':>10}"
+                     f"{f'[{low * 100:+.2f}, {high * 100:+.2f}] pt':>20}"
+                     f"{int((likes & ~steam).sum()):>12}{int((steam & ~likes).sum()):>12}")
+    lines += ["An interval that excludes 0 means the sources really differ at that K.",
+              "'only likes' / 'only Steam': test users whose target only that source finds in the top K.", ""]
+    return lines
 
 
 def per_seed_tables(runs, label):
@@ -178,12 +250,13 @@ def per_seed_tables(runs, label):
     return lines
 
 
-def summary_report(tune_runs, test_runs, alpha):
+def summary_report(tune_runs, test_runs, alpha, alphas):
     """Build the text of evaluation_report_seeds.txt: ALPHA selection on the tuning seeds, results on the test seeds.
 
     tune_runs: list of result dictionaries of the tuning seeds, used only to pick ALPHA
     test_runs: list of result dictionaries of the test seeds, used for every reported number
     alpha:     the ALPHA picked on the tuning seeds by select_alpha()
+    alphas:    {source: its ALPHA picked on the tuning seeds}, for the comparison of popularity sources
     """
     n_tune = N_USERS * len(tune_runs)
     n_test = N_USERS * len(test_runs)
@@ -249,7 +322,8 @@ def summary_report(tune_runs, test_runs, alpha):
         lines.append(f"{f'HR@{k}':8}{test_values[mean.argmax()]:>12.2f}{mean.max():>10.2%}{frozen:>12.2%}"
                      f"{f'+{(mean.max() - frozen) * 100:.2f} pt':>11}")
 
-    lines += [""] + per_seed_tables(tune_runs, "tuning") + per_seed_tables(test_runs, "test")
+    lines += [""] + source_comparison(tune_runs, test_runs, alphas)
+    lines += per_seed_tables(tune_runs, "tuning") + per_seed_tables(test_runs, "test")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -342,17 +416,20 @@ def main():
     if not tune_runs:
         print("no tuning results, ALPHA can't be picked")
         return
-    # ALPHA is fixed here, before any test seed runs
-    alpha = select_alpha(tune_runs)
-    selected = {"alpha": alpha, "selected_by": f"pooled HR@{SELECT_K}", "tuning_seeds": [r["seed"] for r in tune_runs]}
+    # ALPHA is fixed here for each popularity source, before any test seed runs
+    alphas = {source: select_alpha(tune_runs, grid_key) for source, grid_key in SOURCES.items()}
+    alpha = alphas["likes"]
+    selected = {"alpha": alpha, "alpha_steam": alphas["steam"], "selected_by": f"pooled HR@{SELECT_K}",
+                "tuning_seeds": [r["seed"] for r in tune_runs]}
     (OUT_DIR / "selected_alpha.json").write_text(json.dumps(selected, indent=1) + "\n")
-    print(f"ALPHA = {alpha:g}, frozen (picked on seeds {selected['tuning_seeds']})", flush=True)
+    print(f"ALPHA = {alpha:g} (likes), {alphas['steam']:g} (Steam counts), frozen "
+          f"(picked on seeds {selected['tuning_seeds']})", flush=True)
 
     test_runs = run_or_load(cells, args.test, args.summary_only)
     if not test_runs:
         print("no test results to report")
         return
-    report = summary_report(tune_runs, test_runs, alpha)
+    report = summary_report(tune_runs, test_runs, alpha, alphas)
     (OUT_DIR / "evaluation_report_seeds.txt").write_text(report)
     plot_alpha_curves(tune_runs, alpha, OUT_DIR / "hr_by_alpha_tuning.png")
     print(report)
